@@ -31,12 +31,6 @@ TestResults/
 *.coverage
 *.coveragexml
 
-packages/
-*.nupkg
-*.snupkg
-*.nuspec
-*.psmdcp
-*.symbols.nupkg
 project.lock.json
 project.fragment.lock.json
 artifacts/
