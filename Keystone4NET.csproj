@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageId>Keystone4NET</PackageId>
+        <Version>6.5.1.3</Version>
+        <Authors>Denis Kudelin</Authors>
+        <Copyright>Denis Kudelin</Copyright>
+        <PackageProjectUrl>https://github.com/Itexoft/Keystone4NET</PackageProjectUrl>
+        <Company>Itexoft</Company>
+        <Product>Keystone4NET</Product>
+        <Description>Keystone4NET</Description>
+        <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <RepositoryUrl>https://github.com/Itexoft/Keystone4NET</RepositoryUrl>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <LangVersion>13</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Itexoft.Common" Version="0.0.0.7"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.5"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Abstractions" Version="9.0.5"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="9.0.5"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.5"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.5"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.5"/>
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="LICENSE.md" Pack="true" PackagePath=""/>
+        <None Include="README.md" Pack="true" PackagePath=""/>
+        <None Include="NOTICE.md" Pack="true" PackagePath=""/>
+    </ItemGroup>
+    <ItemGroup>
+      <ReferencePathWithRefAssemblies Update="\Users\user\.nuget\packages\itexoft.common\0.0.0.7\lib\net9.0\Itexoft.Common.dll" />
+    </ItemGroup>
+</Project>
