@@ -60,6 +60,36 @@ namespace Keystone4Net.CodeGeneration
                             opts.Add("isIndexed: 'unique'");
                         if (!string.IsNullOrWhiteSpace(fieldAttr.DisplayMode))
                             opts.Add($"ui: {{ displayMode: '{fieldAttr.DisplayMode}' }}");
+
+                        if (fieldAttr.DefaultValue != null)
+                            opts.Add($"defaultValue: {FormatJsValue(fieldAttr.DefaultValue)}");
+
+                        if (fieldAttr.DbIsNullable || !string.IsNullOrWhiteSpace(fieldAttr.DbMap) || !string.IsNullOrWhiteSpace(fieldAttr.DbNativeType))
+                        {
+                            var dbOpts = new List<string>();
+                            if (fieldAttr.DbIsNullable)
+                                dbOpts.Add("isNullable: true");
+                            if (!string.IsNullOrWhiteSpace(fieldAttr.DbMap))
+                                dbOpts.Add($"map: '{fieldAttr.DbMap}'");
+                            if (!string.IsNullOrWhiteSpace(fieldAttr.DbNativeType))
+                                dbOpts.Add($"nativeType: '{fieldAttr.DbNativeType}'");
+                            opts.Add($"db: {{ {string.Join(", ", dbOpts)} }}");
+                        }
+
+                        if (fieldAttr.GraphqlReadIsNonNull || fieldAttr.GraphqlCreateIsNonNull || fieldAttr.GraphqlUpdateIsNonNull)
+                        {
+                            var gqlOpts = new List<string>();
+                            var nn = new List<string>();
+                            if (fieldAttr.GraphqlReadIsNonNull)
+                                nn.Add("read: true");
+                            if (fieldAttr.GraphqlCreateIsNonNull)
+                                nn.Add("create: true");
+                            if (fieldAttr.GraphqlUpdateIsNonNull)
+                                nn.Add("update: true");
+                            if (nn.Count > 0)
+                                gqlOpts.Add($"isNonNull: {{ {string.Join(", ", nn)} }}");
+                            opts.Add($"graphql: {{ {string.Join(", ", gqlOpts)} }}");
+                        }
                     }
                     var optsStr = opts.Count > 0 ? $"{{ {string.Join(", ", opts)} }}" : string.Empty;
                     listsBuilder.AppendLine($"        {field.Name}: {fieldTypeString}({optsStr}),");
@@ -136,6 +166,16 @@ namespace Keystone4Net.CodeGeneration
                 KeystoneFieldType.Image => "image",
                 KeystoneFieldType.CloudinaryImage => "cloudinaryImage",
                 _ => "text"
+            };
+        }
+
+        private static string FormatJsValue(object value)
+        {
+            return value switch
+            {
+                string s => $"'{s}'",
+                bool b => b.ToString().ToLowerInvariant(),
+                _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "null"
             };
         }
 
