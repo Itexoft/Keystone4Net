@@ -49,19 +49,7 @@ namespace Keystone4Net.CodeGeneration
                     var fieldTypeString = GetFieldTypeString(fieldType);
                     fieldImports.Add(fieldTypeString);
 
-                    var opts = new List<string>();
-                    if (fieldAttr != null)
-                    {
-                        if (fieldAttr.IsRequired)
-                            opts.Add("validation: { isRequired: true }");
-                        if (fieldAttr.Index == KeystoneIndex.Indexed)
-                            opts.Add("isIndexed: true");
-                        else if (fieldAttr.Index == KeystoneIndex.Unique)
-                            opts.Add("isIndexed: 'unique'");
-                        if (!string.IsNullOrWhiteSpace(fieldAttr.DisplayMode))
-                            opts.Add($"ui: {{ displayMode: '{fieldAttr.DisplayMode}' }}");
-                    }
-                    var optsStr = opts.Count > 0 ? $"{{ {string.Join(", ", opts)} }}" : string.Empty;
+                    var optsStr = fieldAttr != null ? BuildFieldOptions(fieldAttr) : string.Empty;
                     listsBuilder.AppendLine($"        {field.Name}: {fieldTypeString}({optsStr}),");
                 }
 
@@ -136,6 +124,112 @@ namespace Keystone4Net.CodeGeneration
                 KeystoneFieldType.Image => "image",
                 KeystoneFieldType.CloudinaryImage => "cloudinaryImage",
                 _ => "text"
+            };
+        }
+
+        private static string BuildFieldOptions(KeystoneFieldAttribute attr)
+        {
+            var opts = new List<string>();
+            if (attr.IsRequired)
+                opts.Add("validation: { isRequired: true }");
+            if (attr.MinLength.HasValue || attr.MaxLength.HasValue || !string.IsNullOrWhiteSpace(attr.MatchRegex))
+            {
+                var val = new List<string>();
+                if (attr.MinLength.HasValue)
+                    val.Add($"length: {{ min: {attr.MinLength.Value} }}");
+                if (attr.MaxLength.HasValue)
+                    val.Add($"length: {{ max: {attr.MaxLength.Value} }}");
+                if (!string.IsNullOrWhiteSpace(attr.MatchRegex))
+                {
+                    var expl = !string.IsNullOrWhiteSpace(attr.MatchExplanation) ? $", explanation: '{attr.MatchExplanation}'" : string.Empty;
+                    val.Add($"match: {{ regex: /{attr.MatchRegex}/{expl} }}");
+                }
+                if (val.Count > 0)
+                    opts.Add($"validation: {{ {string.Join(", ", val)} }}");
+            }
+            if (attr.Min != null || attr.Max != null)
+            {
+                var val = new List<string>();
+                if (attr.Min != null)
+                    val.Add($"min: {FormatJsValue(attr.Min)}");
+                if (attr.Max != null)
+                    val.Add($"max: {FormatJsValue(attr.Max)}");
+                opts.Add($"validation: {{ {string.Join(", ", val)} }}");
+            }
+            if (attr.Index == KeystoneIndex.Indexed)
+                opts.Add("isIndexed: true");
+            else if (attr.Index == KeystoneIndex.Unique)
+                opts.Add("isIndexed: 'unique'");
+            if (attr.DisplayMode.HasValue)
+                opts.Add($"ui: {{ displayMode: '{FormatDisplayMode(attr.DisplayMode.Value)}' }}");
+            if (!attr.IsFilterable)
+                opts.Add("isFilterable: false");
+            if (!attr.IsOrderable)
+                opts.Add("isOrderable: false");
+            if (!string.IsNullOrWhiteSpace(attr.Label))
+                opts.Add($"label: '{attr.Label}'");
+            if (attr.DefaultValue != null)
+                opts.Add($"defaultValue: {FormatJsValue(attr.DefaultValue)}");
+            if (attr.DbIsNullable || !string.IsNullOrWhiteSpace(attr.DbMap) || !string.IsNullOrWhiteSpace(attr.DbNativeType) || attr.DbUpdatedAt)
+            {
+                var db = new List<string>();
+                if (attr.DbIsNullable)
+                    db.Add("isNullable: true");
+                if (!string.IsNullOrWhiteSpace(attr.DbMap))
+                    db.Add($"map: '{attr.DbMap}'");
+                if (!string.IsNullOrWhiteSpace(attr.DbNativeType))
+                    db.Add($"nativeType: '{attr.DbNativeType}'");
+                if (attr.DbUpdatedAt)
+                    db.Add("updatedAt: true");
+                opts.Add($"db: {{ {string.Join(", ", db)} }}");
+            }
+            if (attr.GraphqlReadIsNonNull || attr.GraphqlCreateIsNonNull || attr.GraphqlUpdateIsNonNull || attr.GraphqlOmitRead || attr.GraphqlOmitCreate || attr.GraphqlOmitUpdate)
+            {
+                var gql = new List<string>();
+                var nn = new List<string>();
+                if (attr.GraphqlReadIsNonNull)
+                    nn.Add("read: true");
+                if (attr.GraphqlCreateIsNonNull)
+                    nn.Add("create: true");
+                if (attr.GraphqlUpdateIsNonNull)
+                    nn.Add("update: true");
+                if (nn.Count > 0)
+                    gql.Add($"isNonNull: {{ {string.Join(", ", nn)} }}");
+                var omit = new List<string>();
+                if (attr.GraphqlOmitRead)
+                    omit.Add("read: true");
+                if (attr.GraphqlOmitCreate)
+                    omit.Add("create: true");
+                if (attr.GraphqlOmitUpdate)
+                    omit.Add("update: true");
+                if (omit.Count > 0)
+                    gql.Add($"omit: {{ {string.Join(", ", omit)} }}");
+                if (gql.Count > 0)
+                    opts.Add($"graphql: {{ {string.Join(", ", gql)} }}");
+            }
+
+            return opts.Count > 0 ? $"{{ {string.Join(", ", opts)} }}" : string.Empty;
+        }
+
+        private static string FormatDisplayMode(KeystoneFieldDisplayMode mode) => mode switch
+        {
+            KeystoneFieldDisplayMode.Input => "input",
+            KeystoneFieldDisplayMode.Textarea => "textarea",
+            KeystoneFieldDisplayMode.Select => "select",
+            KeystoneFieldDisplayMode.SegmentedControl => "segmented-control",
+            KeystoneFieldDisplayMode.Radio => "radio",
+            KeystoneFieldDisplayMode.Cards => "cards",
+            KeystoneFieldDisplayMode.Count => "count",
+            _ => "input"
+        };
+
+        private static string FormatJsValue(object value)
+        {
+            return value switch
+            {
+                string s => $"'{s}'",
+                bool b => b.ToString().ToLowerInvariant(),
+                _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "null"
             };
         }
 

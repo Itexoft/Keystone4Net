@@ -1,7 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
+        <RuntimeFrameworkVersion>10.0.0-preview.4.24255.5</RuntimeFrameworkVersion>
+        <AspNetCoreTargetingPackVersion>10.0.0-preview.4.24267.6</AspNetCoreTargetingPackVersion>
+        <TargetLatestRuntimePatch>false</TargetLatestRuntimePatch>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Authors>Denis Kudelin</Authors>
