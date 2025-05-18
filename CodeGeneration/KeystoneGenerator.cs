@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using Keystone4Net.Attributes;
 using Keystone4Net.Enums;
+using Keystone4Net.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Keystone4Net.CodeGeneration
@@ -20,11 +21,11 @@ namespace Keystone4Net.CodeGeneration
 
         public string GenerateKeystone()
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder("""
+import { config, list } from '@keystone-6/core';
+import { allowAll } from '@keystone-6/core/access';
+""");
             var fieldImports = new HashSet<string>();
-
-            sb.AppendLine("import { config, list } from '@keystone-6/core';");
-            sb.AppendLine("import { allowAll } from '@keystone-6/core/access';");
 
             var listsBuilder = new StringBuilder();
             listsBuilder.AppendLine("  lists: {");
@@ -46,22 +47,10 @@ namespace Keystone4Net.CodeGeneration
                 {
                     var fieldAttr = field.GetCustomAttribute<KeystoneFieldAttribute>();
                     var fieldType = fieldAttr?.FieldType ?? MapClrType(field.PropertyType);
-                    var fieldTypeString = GetFieldTypeString(fieldType);
+                    var fieldTypeString = fieldType.ToJs();
                     fieldImports.Add(fieldTypeString);
 
-                    var opts = new List<string>();
-                    if (fieldAttr != null)
-                    {
-                        if (fieldAttr.IsRequired)
-                            opts.Add("validation: { isRequired: true }");
-                        if (fieldAttr.Index == KeystoneIndex.Indexed)
-                            opts.Add("isIndexed: true");
-                        else if (fieldAttr.Index == KeystoneIndex.Unique)
-                            opts.Add("isIndexed: 'unique'");
-                        if (!string.IsNullOrWhiteSpace(fieldAttr.DisplayMode))
-                            opts.Add($"ui: {{ displayMode: '{fieldAttr.DisplayMode}' }}");
-                    }
-                    var optsStr = opts.Count > 0 ? $"{{ {string.Join(", ", opts)} }}" : string.Empty;
+                    var optsStr = BuildFieldOptions(fieldAttr);
                     listsBuilder.AppendLine($"        {field.Name}: {fieldTypeString}({optsStr}),");
                 }
 
@@ -76,11 +65,13 @@ namespace Keystone4Net.CodeGeneration
             sb.AppendLine(" } from '@keystone-6/core/fields';");
 
             sb.AppendLine();
-            sb.AppendLine("export default config({");
-            sb.AppendLine("  db: {");
-            sb.AppendLine($"    provider: '{GetProvider().ToString().ToLower()}',");
-            sb.AppendLine($"    url: '{_dbContext.Database.GetConnectionString()}',");
-            sb.AppendLine("  },");
+            sb.AppendLine($$"""
+export default config({
+  db: {
+    provider: '{GetProvider().ToString().ToLower()}',
+    url: '{_dbContext.Database.GetConnectionString()}',
+  },
+""");
             sb.Append(listsBuilder.ToString());
             sb.AppendLine("});");
 
@@ -113,30 +104,62 @@ namespace Keystone4Net.CodeGeneration
             return KeystoneFieldType.Text;
         }
 
-        private static string GetFieldTypeString(KeystoneFieldType type)
+
+        private static string FormatJsValue(object value)
         {
-            return type switch
+            return value switch
             {
-                KeystoneFieldType.Text => "text",
-                KeystoneFieldType.Checkbox => "checkbox",
-                KeystoneFieldType.Integer => "integer",
-                KeystoneFieldType.BigInt => "bigInt",
-                KeystoneFieldType.Float => "float",
-                KeystoneFieldType.Decimal => "decimal",
-                KeystoneFieldType.Password => "password",
-                KeystoneFieldType.Timestamp => "timestamp",
-                KeystoneFieldType.CalendarDay => "calendarDay",
-                KeystoneFieldType.Json => "json",
-                KeystoneFieldType.Multiselect => "multiselect",
-                KeystoneFieldType.Select => "select",
-                KeystoneFieldType.Document => "document",
-                KeystoneFieldType.Relationship => "relationship",
-                KeystoneFieldType.Virtual => "virtual",
-                KeystoneFieldType.File => "file",
-                KeystoneFieldType.Image => "image",
-                KeystoneFieldType.CloudinaryImage => "cloudinaryImage",
-                _ => "text"
+                string s => $"'{s}'",
+                bool b => b.ToString().ToLowerInvariant(),
+                _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "null"
             };
+        }
+
+        private static string BuildFieldOptions(KeystoneFieldAttribute? fieldAttr)
+        {
+            if (fieldAttr == null) return string.Empty;
+
+            var opts = new List<string>();
+
+            if (fieldAttr.IsRequired)
+                opts.Add("validation: { isRequired: true }");
+
+            if (fieldAttr.Index == KeystoneIndex.Indexed)
+                opts.Add("isIndexed: true");
+            else if (fieldAttr.Index == KeystoneIndex.Unique)
+                opts.Add("isIndexed: 'unique'");
+
+            if (fieldAttr.DisplayMode.HasValue)
+                opts.Add($"ui: {{ displayMode: '{fieldAttr.DisplayMode.Value.ToJs()}' }}");
+
+            if (fieldAttr.DefaultValue != null)
+                opts.Add($"defaultValue: {FormatJsValue(fieldAttr.DefaultValue)}");
+
+            if (fieldAttr.DbIsNullable || !string.IsNullOrWhiteSpace(fieldAttr.DbMap) || !string.IsNullOrWhiteSpace(fieldAttr.DbNativeType))
+            {
+                var dbOpts = new List<string>();
+                if (fieldAttr.DbIsNullable)
+                    dbOpts.Add("isNullable: true");
+                if (!string.IsNullOrWhiteSpace(fieldAttr.DbMap))
+                    dbOpts.Add($"map: '{fieldAttr.DbMap}'");
+                if (!string.IsNullOrWhiteSpace(fieldAttr.DbNativeType))
+                    dbOpts.Add($"nativeType: '{fieldAttr.DbNativeType}'");
+                opts.Add($"db: {{ {string.Join(", ", dbOpts)} }}");
+            }
+
+            if (fieldAttr.GraphqlReadIsNonNull || fieldAttr.GraphqlCreateIsNonNull || fieldAttr.GraphqlUpdateIsNonNull)
+            {
+                var nn = new List<string>();
+                if (fieldAttr.GraphqlReadIsNonNull)
+                    nn.Add("read: true");
+                if (fieldAttr.GraphqlCreateIsNonNull)
+                    nn.Add("create: true");
+                if (fieldAttr.GraphqlUpdateIsNonNull)
+                    nn.Add("update: true");
+                opts.Add($"graphql: {{ isNonNull: {{ {string.Join(", ", nn)} }} }}");
+            }
+
+            return opts.Count > 0 ? $"{{ {string.Join(", ", opts)} }}" : string.Empty;
         }
 
         private KeystoneDbProvider GetProvider()
