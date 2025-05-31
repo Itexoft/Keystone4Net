@@ -1,8 +1,5 @@
-using Keystone4Net.Attributes;
-
 namespace Keystone4Net.Enums;
 
-[KeystoneEnum(KeystoneImportObjects.Fields)]
 public enum KeystoneFieldType
 {
     Text,

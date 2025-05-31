@@ -20,6 +20,7 @@ public class KeystoneOptionsSerializer
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters =
         {
+            new EnumFunctionConverter(),
             new JsonStringEnumConverter(new CamelCase()),
             new FunctionConverter(),
             new FunctionCallConverter()
@@ -130,7 +131,8 @@ public class KeystoneOptionsSerializer
         public override void Write(Utf8JsonWriter writer, JsFunctionCall value, JsonSerializerOptions options)
         {
             var args = string.Join(", ", value.Args.Select(x => JsonSerializer.Serialize(x, options)));
-            writer.WriteRawValue($"{value.Name}({args})", true);
+            var obj = Utils.ToCamelCase(value.Object.ToString());
+            writer.WriteRawValue($"{obj}.{value.Name}({args})", true);
         }
     }
 
@@ -139,6 +141,43 @@ public class KeystoneOptionsSerializer
         public override string ConvertName(string str)
         {
             return Utils.ToCamelCase(str);
+        }
+    }
+
+    private sealed class EnumFunctionConverter : JsonConverterFactory
+    {
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert.IsEnum && typeToConvert.GetCustomAttribute<KeystoneEnumAttribute>() != null;
+        }
+
+        public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+        {
+            var attr = typeToConvert.GetCustomAttribute<KeystoneEnumAttribute>()!;
+            var obj = Utils.ToCamelCase(attr.Object.ToString());
+            var converterType = typeof(EnumConverter<>).MakeGenericType(typeToConvert);
+            return (JsonConverter)Activator.CreateInstance(converterType, obj)!;
+        }
+
+        private sealed class EnumConverter<T> : JsonConverter<T> where T : struct, Enum
+        {
+            private readonly string obj;
+
+            public EnumConverter(string obj)
+            {
+                this.obj = obj;
+            }
+
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+            {
+                var name = Utils.ToCamelCase(value.ToString());
+                writer.WriteRawValue($"{obj}.{name}", true);
+            }
         }
     }
 }
