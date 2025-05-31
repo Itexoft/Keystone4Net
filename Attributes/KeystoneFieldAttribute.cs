@@ -11,7 +11,7 @@ public sealed class KeystoneFieldAttribute(KeystoneFieldType fieldType) : Keysto
 
     public object? Options { get; init; }
     
-    public ListUiOptions Ui { get; init; }
+    public FieldUiOptions? Ui { get; init; }
 
     internal override object Build()
     {

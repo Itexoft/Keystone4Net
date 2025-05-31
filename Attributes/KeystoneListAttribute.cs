@@ -13,4 +13,6 @@ public sealed class KeystoneListAttribute : KeystoneBaseAttribute
     public string? Path { get; init; }
 
     public KeystoneListAccess Access { get; init; } = KeystoneListAccess.AllowAll;
+
+    public ListUiOptions? Ui { get; init; }
 }

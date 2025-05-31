@@ -12,10 +12,11 @@ public class Keystone(DbContext db)
     {
         var json = new KeystoneOptionsSerializer().Serialize(db);
         var sb = new StringBuilder();
-        foreach (var value in  Enum.GetValues<KeystoneImportObjects>())
+        foreach (var value in Enum.GetValues<KeystoneImportObjects>())
         {
-            var importFrom = value == KeystoneImportObjects.Core ? "" : "/" + value;
-            sb.Append($"import * as {value} from '@keystone-6/core{importFrom}';");
+            var name = Utils.ToCamelCase(value.ToString());
+            var importFrom = value == KeystoneImportObjects.Core ? "" : "/" + name;
+            sb.Append($"import * as {name} from '@keystone-6/core{importFrom}';");
         }
         
         sb.AppendLine();
