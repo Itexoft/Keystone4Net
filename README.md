@@ -17,7 +17,7 @@ public class AppDbContext : DbContext, IKeystone
     public void ConfigureKeystone(KeystoneConfig config)
     {
         var users = new KeystoneList<User>();
-        users.Add(nameof(User.Name), KeystoneFieldType.Text);
+        users.Add(nameof(User.Name), new KeystoneTextField());
         config.Add(users);
     }
 }
