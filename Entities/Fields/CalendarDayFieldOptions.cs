@@ -3,11 +3,11 @@ namespace Keystone4Net.Entities;
 public class KeystoneCalendarDayFieldOptions : KeystoneFieldOptions
 {
     public string? DefaultValue { get; set; }
-    public KeystoneCalendarDayDbOptions? Db { get; set; }
+    internal KeystoneCalendarDayDbOptions? Db { get; set; }
     public KeystoneCalendarDayValidationOptions? Validation { get; set; }
 }
 
-public class KeystoneCalendarDayDbOptions
+internal class KeystoneCalendarDayDbOptions
 {
     public bool? IsNullable { get; set; }
 }

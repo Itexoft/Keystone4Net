@@ -4,10 +4,10 @@ public class KeystoneRelationshipFieldOptions : KeystoneFieldOptions<KeystoneRel
 {
     public bool? Many { get; set; }
     public string Ref { get; set; } = string.Empty;
-    public KeystoneRelationshipDbOptions? Db { get; set; }
+    internal KeystoneRelationshipDbOptions? Db { get; set; }
 }
 
-public class KeystoneRelationshipDbOptions
+internal class KeystoneRelationshipDbOptions
 {
     public string? RelationName { get; set; }
 }

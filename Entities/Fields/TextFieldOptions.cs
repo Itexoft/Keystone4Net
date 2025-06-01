@@ -5,7 +5,7 @@ namespace Keystone4Net.Entities;
 public class KeystoneTextFieldOptions : KeystoneFieldOptions<KeystoneTextUiOptions>
 {
     public string? DefaultValue { get; set; }
-    public KeystoneTextDbOptions? Db { get; set; }
+    internal KeystoneTextDbOptions? Db { get; set; }
     public KeystoneTextValidationOptions? Validation { get; set; }
 }
 
@@ -22,7 +22,7 @@ public class KeystoneTextLengthOptions
     public int? Max { get; set; }
 }
 
-public class KeystoneTextDbOptions
+internal class KeystoneTextDbOptions
 {
     public string? Map { get; set; }
     public bool IsNullable { get; set; }

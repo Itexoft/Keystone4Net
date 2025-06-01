@@ -3,11 +3,11 @@ namespace Keystone4Net.Entities;
 public class KeystoneFloatFieldOptions : KeystoneFieldOptions
 {
     public double? DefaultValue { get; set; }
-    public KeystoneFloatDbOptions? Db { get; set; }
+    internal KeystoneFloatDbOptions? Db { get; set; }
     public KeystoneFloatValidationOptions? Validation { get; set; }
 }
 
-public class KeystoneFloatDbOptions
+internal class KeystoneFloatDbOptions
 {
     public bool? IsNullable { get; set; }
     public string? Map { get; set; }

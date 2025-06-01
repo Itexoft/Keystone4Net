@@ -90,7 +90,7 @@ public class KeystoneFieldGraphqlOptions
     public KeystoneFieldGraphqlOmit? Omit { get; set; }
 }
 
-public class KeystoneDb
+internal class KeystoneDb
 {
     public KeystoneDb(DbContext dbContext, string? baseDir)
     {

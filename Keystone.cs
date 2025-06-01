@@ -6,6 +6,7 @@ using Itexoft.Common.ExecutionTools.Node;
 using Keystone4Net.Common;
 using Keystone4Net.Entities;
 using Keystone4Net.Enums;
+using System.Reflection;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -81,7 +82,32 @@ public sealed class Keystone<T>(T dbContext, string baseDir) where T : DbContext
         var config = new KeystoneConfig(dbContext, baseDir);
         dbContext.ConfigureKeystone(config);
         foreach (var list in config.Lists.Values)
-            list.Db.Map = dbContext.Model.FindEntityType(list.Type)!.GetTableName()!;
+        {
+            var entity = dbContext.Model.FindEntityType(list.Type)!;
+            list.Db.Map = entity.GetTableName()!;
+
+            foreach (var (fieldKey, field) in list.Fields)
+            {
+                var property = entity.FindProperty(fieldKey);
+                if (property is null || field.Options is null)
+                    continue;
+
+                var dbProp = field.Options.GetType().GetProperty("Db", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (dbProp is null)
+                    continue;
+
+                var dbValue = dbProp.GetValue(field.Options) ?? Activator.CreateInstance(dbProp.PropertyType);
+                dbProp.SetValue(field.Options, dbValue);
+
+                var mapProp = dbValue.GetType().GetProperty("Map", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (mapProp != null && mapProp.GetValue(dbValue) is null)
+                    mapProp.SetValue(dbValue, property.Name);
+
+                var nullableProp = dbValue.GetType().GetProperty("IsNullable", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (nullableProp != null && nullableProp.GetValue(dbValue) is null)
+                    nullableProp.SetValue(dbValue, property.IsNullable);
+            }
+        }
 
         var json = JsonSerializer.Serialize(config, jsonSerializerOptions);
         var sb = new StringBuilder();

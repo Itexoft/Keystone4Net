@@ -4,7 +4,7 @@ public class KeystoneSelectFieldOptions : KeystoneFieldOptions
 {
     public string? DefaultValue { get; set; }
     public KeystoneSelectOption[]? Options { get; set; }
-    public KeystoneSelectDbOptions? Db { get; set; }
+    internal KeystoneSelectDbOptions? Db { get; set; }
     public KeystoneSelectValidationOptions? Validation { get; set; }
 }
 
@@ -14,7 +14,7 @@ public class KeystoneSelectOption
     public string Value { get; set; } = string.Empty;
 }
 
-public class KeystoneSelectDbOptions
+internal class KeystoneSelectDbOptions
 {
     public bool? IsNullable { get; set; }
     public string? Map { get; set; }
