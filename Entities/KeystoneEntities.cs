@@ -57,18 +57,37 @@ public sealed class KeystoneListUiOptions
     public string? Path { get; set; }
 }
 
+
 public sealed class KeystoneTextFieldOptions : IKeystoneFieldOptions
 {
+    public object? Access { get; set; }
+
+    public object? Hooks { get; set; }
+
+    public string? Label { get; set; }
+
+    public object? IsFilterable { get; set; }
+
+    public object? IsOrderable { get; set; }
+
+    public string? DefaultValue { get; set; }
+
+    public KeystoneTextDbOptions? Db { get; set; }
+
     public KeystoneTextValidationOptions? Validation { get; set; }
 
     public KeystoneTextUiOptions? Ui { get; set; }
 
     public KeystoneIndex? IsIndexed { get; set; }
+
+    public KeystoneFieldGraphqlOptions? Graphql { get; set; }
 }
 
 public class KeystoneFieldUiOptions
 {
     public string? Views { get; set; }
+
+    public string? Description { get; set; }
 
     public KeystoneViewOptions? CreateView { get; set; }
 
@@ -96,6 +115,44 @@ public sealed class KeystoneTextLengthOptions
     public int Min { get; set; }
 
     public int? Max { get; set; }
+}
+
+public sealed class KeystoneTextDbOptions
+{
+    public string? Map { get; set; }
+
+    public bool IsNullable { get; set; }
+
+    public string? NativeType { get; set; }
+
+    public KeystoneJsFunction? ExtendPrismaSchema { get; set; }
+}
+
+public sealed class KeystoneFieldGraphqlIsNonNull
+{
+    public bool Read { get; set; }
+
+    public bool Create { get; set; }
+
+    public bool Update { get; set; }
+}
+
+public sealed class KeystoneFieldGraphqlOmit
+{
+    public bool Read { get; set; }
+
+    public bool Create { get; set; }
+
+    public bool Update { get; set; }
+}
+
+public sealed class KeystoneFieldGraphqlOptions
+{
+    public KeystoneGraphqlCacheHint? CacheHint { get; set; }
+
+    public KeystoneFieldGraphqlIsNonNull? IsNonNull { get; set; }
+
+    public KeystoneFieldGraphqlOmit? Omit { get; set; }
 }
 
 public sealed class KeystoneDb
@@ -147,9 +204,55 @@ public sealed class KeystoneTextMatchOptions
     public string? Explanation { get; set; }
 }
 
+public sealed class KeystoneGraphqlCacheHint
+{
+    public int MaxAge { get; set; }
+
+    public string? Scope { get; set; }
+}
+
 internal sealed class KeystoneListDb
 {
     public string? Map { get; set; }
+
+    public KeystoneIdFieldOptions? IdField { get; set; }
+
+    public KeystoneJsFunction? ExtendPrismaSchema { get; set; }
+}
+
+public sealed class KeystoneIdFieldOptions
+{
+    public string Kind { get; set; } = string.Empty;
+
+    public string? Type { get; set; }
+}
+
+public sealed class KeystoneGraphqlOmit
+{
+    public bool Query { get; set; }
+
+    public bool Create { get; set; }
+
+    public bool Update { get; set; }
+
+    public bool Delete { get; set; }
+}
+
+public sealed class KeystoneListGraphqlOptions
+{
+    public string? Description { get; set; }
+
+    public string? Plural { get; set; }
+
+    public string? ItemQueryName { get; set; }
+
+    public string? ListQueryName { get; set; }
+
+    public int? MaxTake { get; set; }
+
+    public KeystoneGraphqlCacheHint? CacheHint { get; set; }
+
+    public KeystoneGraphqlOmit? Omit { get; set; }
 }
 
 public sealed class KeystoneTextUiOptions : KeystoneFieldUiOptions
@@ -162,17 +265,46 @@ public sealed class KeystoneUiSettings
     public bool IsDisabled { get; set; }
 
     public KeystoneJsFunction? IsAccessAllowed { get; set; }
+
+    public string[]? PublicPages { get; set; }
+
+    public string? BasePath { get; set; }
+
+    public KeystoneJsFunction? PageMiddleware { get; set; }
+
+    public KeystoneJsFunction? GetAdditionalFiles { get; set; }
 }
 
 public abstract class KeystoneSession(string name) : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Session, name, null)
 {
 }
 
-public sealed class KeystoneStatelessSession() : KeystoneSession("statelessSessions")
+public abstract class KeystoneCookieSession(string name) : KeystoneSession(name)
 {
     public string Secret { get; set; } = string.Empty;
 
+    public object? IronOptions { get; set; }
+
     public int MaxAge { get; set; }
+
+    public string? CookieName { get; set; }
+
+    public bool? Secure { get; set; }
+
+    public string? Path { get; set; }
+
+    public string? Domain { get; set; }
+
+    public object? SameSite { get; set; }
+}
+
+public sealed class KeystoneStatelessSession() : KeystoneCookieSession("statelessSessions")
+{
+}
+
+public sealed class KeystoneStoredSession() : KeystoneCookieSession("storedSessions")
+{
+    public object? Store { get; set; }
 }
 
 public sealed class KeystoneField(KeystoneFieldType type, IKeystoneFieldOptions? options)
@@ -186,4 +318,8 @@ public sealed class KeystoneField(KeystoneFieldType type, IKeystoneFieldOptions?
 public sealed class KeystoneListAccess(string name) : KeystoneJsObject(KeystoneImportObjects.Access, Utils.ToCamelCase(name))
 {
     public static KeystoneListAccess AllowAll { get; } = new(nameof(AllowAll));
+
+    public static KeystoneListAccess DenyAll { get; } = new(nameof(DenyAll));
+
+    public static KeystoneListAccess AllOperations { get; } = new(nameof(AllOperations));
 }
