@@ -3,11 +3,25 @@ using Keystone4Net.Enums;
 
 namespace Keystone4Net.Entities;
 
-public class KeystoneField(KeystoneFieldType type, KeystoneFieldOptions? options)
-    : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Fields, Utils.ToCamelCase(type), options)
+public abstract class KeystoneField<TUiOptions> : KeystoneJsFunctionPropArgCall where TUiOptions : KeystoneFieldUiOptions
 {
-    public KeystoneFieldType Type { get; set; } = type;
+    protected KeystoneField(string name) : base(KeystoneImportObjects.Fields, name, null)
+    {
+    }
 
-    public KeystoneFieldOptions? Options { get; set; } = options;
+    public KeystoneFieldAccess? Access { get; set; }
+    public KeystoneFieldHooks? Hooks { get; set; }
+    public string? Label { get; set; }
+    public bool? IsFilterable { get; set; }
+    public bool? IsOrderable { get; set; }
+    public TUiOptions? Ui { get; set; }
+    public KeystoneIndex? IsIndexed { get; set; }
+    public KeystoneFieldGraphqlOptions? Graphql { get; set; }
 }
 
+public abstract class KeystoneField : KeystoneField<KeystoneFieldUiOptions>
+{
+    protected KeystoneField(string name) : base(name)
+    {
+    }
+}

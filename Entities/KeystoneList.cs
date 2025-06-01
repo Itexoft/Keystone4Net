@@ -37,10 +37,6 @@ public abstract class KeystoneList(Type type) : KeystoneJsFunctionPropArgCall(Ke
         return key;
     }
 
-    public string Add(string key, KeystoneFieldType value, KeystoneFieldOptions? options = null)
-    {
-        return this.Add(key, new(value, options));
-    }
 }
 
 public sealed class KeystoneList<T>() : KeystoneList(typeof(T))
