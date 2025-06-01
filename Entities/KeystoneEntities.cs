@@ -124,6 +124,16 @@ public class KeystoneDb
     public KeystoneDbProvider Provider { get; set; }
 
     public string Url { get; set; }
+
+    public KeystoneJsFunction? OnConnect { get; set; }
+
+    public bool? EnableLogging { get; set; }
+
+    public KeystoneIdFieldOptions? IdField { get; set; }
+
+    public string? ShadowDatabaseUrl { get; set; }
+
+    public KeystoneJsFunction? ExtendPrismaSchema { get; set; }
 }
 
 public class KeystoneTextMatchOptions
@@ -221,4 +231,56 @@ public class KeystoneFieldUiOptions
     public KeystoneViewOptions? CreateView { get; set; }
     public KeystoneItemViewOptions? ItemView { get; set; }
     public KeystoneViewOptions? ListView { get; set; }
+}
+public class KeystoneTypesConfig
+{
+    public string Path { get; set; } = string.Empty;
+}
+
+public class KeystoneGraphqlOptions
+{
+    public bool? Debug { get; set; }
+    public string? Path { get; set; }
+    public object? Playground { get; set; }
+    public object? ApolloConfig { get; set; }
+    public string? SchemaPath { get; set; }
+}
+
+public class KeystoneServerOptions
+{
+    public object? Cors { get; set; }
+    public int? Port { get; set; }
+    public object? Options { get; set; }
+    public int? MaxFileSize { get; set; }
+    public KeystoneJsFunction? ExtendExpressApp { get; set; }
+    public KeystoneJsFunction? ExtendHttpServer { get; set; }
+}
+
+public class KeystoneStorageConfig
+{
+    public string Kind { get; set; } = string.Empty;
+    public string Type { get; set; } = string.Empty;
+    public bool? Preserve { get; set; }
+    public KeystoneJsFunction? TransformName { get; set; }
+    public KeystoneJsFunction? GenerateUrl { get; set; }
+    public KeystoneServerRoute? ServerRoute { get; set; }
+    public string? BucketName { get; set; }
+    public string? Region { get; set; }
+    public string? AccessKeyId { get; set; }
+    public string? SecretAccessKey { get; set; }
+    public string? PathPrefix { get; set; }
+    public string? Endpoint { get; set; }
+    public bool? ForcePathStyle { get; set; }
+    public KeystoneSignedOptions? Signed { get; set; }
+    public string? Acl { get; set; }
+}
+
+public class KeystoneServerRoute
+{
+    public string Path { get; set; } = string.Empty;
+}
+
+public class KeystoneSignedOptions
+{
+    public int Expiry { get; set; }
 }

@@ -12,9 +12,21 @@ public class KeystoneConfig : KeystoneJsFunctionPropArgCall
 
     internal KeystoneDb Db { get; }
 
+    public KeystoneTypesConfig? Types { get; set; }
+
+    public KeystoneGraphqlOptions? Graphql { get; set; }
+
+    public KeystoneServerOptions? Server { get; set; }
+
     public KeystoneSession? Session { get; set; }
 
     public KeystoneUiSettings? Ui { get; set; }
+
+    public KeystoneJsFunction? ExtendGraphqlSchema { get; set; }
+
+    public Dictionary<string, KeystoneStorageConfig>? Storage { get; set; }
+
+    public bool Telemetry { get; set; }
 
     public Dictionary<string, KeystoneList> Lists { get; } = [];
 

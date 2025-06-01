@@ -34,3 +34,4 @@ public class KeystoneStoredSession() : KeystoneCookieSession("storedSessions")
     public KeystoneJsFunction? Store { get; set; }
 }
 
+
