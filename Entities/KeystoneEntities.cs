@@ -58,18 +58,8 @@ public class KeystoneListUiOptions
 }
 
 
-public class KeystoneTextFieldOptions : IKeystoneFieldOptions
+public class KeystoneTextFieldOptions : KeystoneFieldOptions
 {
-    public object? Access { get; set; }
-
-    public object? Hooks { get; set; }
-
-    public string? Label { get; set; }
-
-    public bool? IsFilterable { get; set; }
-
-    public bool? IsOrderable { get; set; }
-
     public string? DefaultValue { get; set; }
 
     public KeystoneTextDbOptions? Db { get; set; }
@@ -77,10 +67,6 @@ public class KeystoneTextFieldOptions : IKeystoneFieldOptions
     public KeystoneTextValidationOptions? Validation { get; set; }
 
     public KeystoneTextUiOptions? Ui { get; set; }
-
-    public KeystoneIndex? IsIndexed { get; set; }
-
-    public KeystoneFieldGraphqlOptions? Graphql { get; set; }
 }
 
 public class KeystoneFieldUiOptions
@@ -315,12 +301,12 @@ public class KeystoneStoredSession() : KeystoneCookieSession("storedSessions")
     public object? Store { get; set; }
 }
 
-public class KeystoneField(KeystoneFieldType type, IKeystoneFieldOptions? options)
+public class KeystoneField(KeystoneFieldType type, KeystoneFieldOptions? options)
     : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Fields, Utils.ToCamelCase(type), options)
 {
     public KeystoneFieldType Type { get; set; } = type;
 
-    public IKeystoneFieldOptions? Options { get; set; } = options;
+    public KeystoneFieldOptions? Options { get; set; } = options;
 }
 
 public class KeystoneListAccess(string name) : KeystoneJsObject(KeystoneImportObjects.Access, Utils.ToCamelCase(name))

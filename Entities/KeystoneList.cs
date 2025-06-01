@@ -17,7 +17,7 @@ public abstract class KeystoneList(Type type) : KeystoneJsFunctionPropArgCall(Ke
 
     public KeystoneListGraphqlOptions? Graphql { get; set; }
 
-    public object? Hooks { get; set; }
+    public KeystoneListHooks? Hooks { get; set; }
 
     public string? Description { get; set; }
 
@@ -37,7 +37,7 @@ public abstract class KeystoneList(Type type) : KeystoneJsFunctionPropArgCall(Ke
         return key;
     }
 
-    public string Add(string key, KeystoneFieldType value, IKeystoneFieldOptions? options = null)
+    public string Add(string key, KeystoneFieldType value, KeystoneFieldOptions? options = null)
     {
         return this.Add(key, new(value, options));
     }
