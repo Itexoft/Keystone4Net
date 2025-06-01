@@ -57,8 +57,6 @@ public class KeystoneListUiOptions
     public string? Path { get; set; }
 }
 
-
-
 public class KeystoneFieldGraphqlIsNonNull
 {
     public bool Read { get; set; }
