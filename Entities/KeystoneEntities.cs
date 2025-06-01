@@ -225,6 +225,14 @@ public class KeystoneIdFieldOptions
     public string Kind { get; set; } = string.Empty;
 
     public string? Type { get; set; }
+
+    public int? Bytes { get; set; }
+
+    public string? Encoding { get; set; }
+
+    public int? Version { get; set; }
+
+    public int? Length { get; set; }
 }
 
 public class KeystoneGraphqlOmit
@@ -322,4 +330,6 @@ public class KeystoneListAccess(string name) : KeystoneJsObject(KeystoneImportOb
     public static KeystoneListAccess DenyAll { get; } = new(nameof(DenyAll));
 
     public static KeystoneListAccess AllOperations { get; } = new(nameof(AllOperations));
+
+    public static KeystoneListAccess Unfiltered { get; } = new(nameof(Unfiltered));
 }

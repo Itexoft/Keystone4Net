@@ -12,6 +12,7 @@ public enum KeystoneFieldType
     Timestamp,
     CalendarDay,
     Json,
+    Bytes,
     Multiselect,
     Select,
     Document,
