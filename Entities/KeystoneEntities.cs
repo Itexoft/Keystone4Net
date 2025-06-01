@@ -2,6 +2,7 @@ using System.Reflection;
 using Keystone4Net.Common;
 using Keystone4Net.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace Keystone4Net.Entities;
 
@@ -28,6 +29,11 @@ public class KeystoneViewOptions
     public KeystoneFieldMode DefaultFieldMode { get; set; }
 }
 
+public class KeystoneItemViewOptions : KeystoneViewOptions
+{
+    public KeystoneFieldPosition FieldPosition { get; set; }
+}
+
 public class KeystoneListUiOptions
 {
     public string? Label { get; set; }
@@ -38,15 +44,15 @@ public class KeystoneListUiOptions
 
     public string? Description { get; set; }
 
-    public bool HideNavigation { get; set; }
+    public KeystoneJsFunction? IsHidden { get; set; }
 
-    public bool HideCreate { get; set; }
+    public KeystoneJsFunction? HideCreate { get; set; }
 
-    public bool HideDelete { get; set; }
+    public KeystoneJsFunction? HideDelete { get; set; }
 
     public KeystoneViewOptions? CreateView { get; set; }
 
-    public KeystoneViewOptions? ItemView { get; set; }
+    public KeystoneItemViewOptions? ItemView { get; set; }
 
     public KeystoneListViewOptions? ListView { get; set; }
 
@@ -222,6 +228,7 @@ public class KeystoneUiSettings
 
 public class KeystoneIronOptions
 {
+    public Dictionary<string, object?>? Values { get; set; }
 }
 
 public class KeystoneFieldUiOptions

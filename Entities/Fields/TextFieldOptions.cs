@@ -9,13 +9,6 @@ public class KeystoneTextFieldOptions : KeystoneFieldOptions<KeystoneTextUiOptio
     public KeystoneTextValidationOptions? Validation { get; set; }
 }
 
-
-
-public class KeystoneItemViewOptions : KeystoneViewOptions
-{
-    public KeystoneFieldPosition FieldPosition { get; set; }
-}
-
 public class KeystoneTextValidationOptions
 {
     public bool IsRequired { get; set; }
