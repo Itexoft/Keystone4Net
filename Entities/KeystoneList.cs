@@ -15,6 +15,18 @@ public abstract class KeystoneList(Type type) : KeystoneJsFunctionPropArgCall(Ke
 
     public KeystoneListUiOptions? Ui { get; set; }
 
+    public KeystoneListGraphqlOptions? Graphql { get; set; }
+
+    public object? Hooks { get; set; }
+
+    public string? Description { get; set; }
+
+    public bool IsSingleton { get; set; }
+
+    public bool? DefaultIsFilterable { get; set; }
+
+    public bool? DefaultIsOrderable { get; set; }
+
     public Dictionary<string, KeystoneField> Fields { get; } = [];
 
     public string Add(string key, KeystoneField value)

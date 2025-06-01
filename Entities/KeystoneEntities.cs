@@ -66,9 +66,9 @@ public class KeystoneTextFieldOptions : IKeystoneFieldOptions
 
     public string? Label { get; set; }
 
-    public object? IsFilterable { get; set; }
+    public bool? IsFilterable { get; set; }
 
-    public object? IsOrderable { get; set; }
+    public bool? IsOrderable { get; set; }
 
     public string? DefaultValue { get; set; }
 
@@ -211,7 +211,7 @@ public class KeystoneGraphqlCacheHint
     public string? Scope { get; set; }
 }
 
-internal class KeystoneListDb
+internal sealed class KeystoneListDb
 {
     public string? Map { get; set; }
 
