@@ -17,7 +17,7 @@ public abstract class KeystoneList(Type type) : KeystoneJsFunctionPropArgCall(Ke
 
     public KeystoneListGraphqlOptions? Graphql { get; set; }
 
-    public object? Hooks { get; set; }
+    public KeystoneListHooks? Hooks { get; set; }
 
     public string? Description { get; set; }
 

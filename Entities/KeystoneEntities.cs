@@ -62,7 +62,7 @@ public class KeystoneTextFieldOptions : IKeystoneFieldOptions
 {
     public object? Access { get; set; }
 
-    public object? Hooks { get; set; }
+    public KeystoneFieldHooks? Hooks { get; set; }
 
     public string? Label { get; set; }
 
