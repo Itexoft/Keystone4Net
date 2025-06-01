@@ -4,28 +4,27 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Itexoft.Common.ExecutionTools.Node;
 using Keystone4Net.Common;
-using Keystone4Net.Entities;
-using Keystone4Net.Enums;
 using System.Reflection;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Keystone4Net;
 
-public sealed class Keystone<T>(T dbContext, string baseDir) where T : DbContext, IKeystone
+public sealed class Keystone<T>(T dbContext, string baseDir) where T : DbContext, IKeystoneDbContext
 {
     private const string KeystoneJS = "keystone.js";
     
     private static readonly JsonSerializerOptions jsonSerializerOptions = new()
     {
         IncludeFields = true,
-        PropertyNamingPolicy = new CamelCase(),
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Converters =
         {
-            new JsonStringEnumConverter(new CamelCase()),
+            new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
+            new ValueConverter(),
             new ObjectConverter(),
             new FunctionConverter(),
             new FunctionCallConverter()
@@ -83,29 +82,18 @@ public sealed class Keystone<T>(T dbContext, string baseDir) where T : DbContext
         dbContext.ConfigureKeystone(config);
         foreach (var list in config.Lists.Values)
         {
-            var entity = dbContext.Model.FindEntityType(list.Type)!;
+            var entity = dbContext.Model.FindEntityType(list.ClrType)!;
             list.Db.Map = entity.GetTableName()!;
 
             foreach (var (fieldKey, field) in list.Fields)
             {
-                var property = entity.FindProperty(fieldKey);
-                if (property is null || field.Options is null)
+                var prop = entity.FindProperty(fieldKey);
+
+                if (prop is null)
                     continue;
-
-                var dbProp = field.Options.GetType().GetProperty("Db", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (dbProp is null)
-                    continue;
-
-                var dbValue = dbProp.GetValue(field.Options) ?? Activator.CreateInstance(dbProp.PropertyType);
-                dbProp.SetValue(field.Options, dbValue);
-
-                var mapProp = dbValue.GetType().GetProperty("Map", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (mapProp != null && mapProp.GetValue(dbValue) is null)
-                    mapProp.SetValue(dbValue, property.Name);
-
-                var nullableProp = dbValue.GetType().GetProperty("IsNullable", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (nullableProp != null && nullableProp.GetValue(dbValue) is null)
-                    nullableProp.SetValue(dbValue, property.IsNullable);
+                
+                field.Db.Map = prop.Name;
+                field.Db.IsNullable = prop.IsNullable;
             }
         }
 
@@ -123,6 +111,21 @@ public sealed class Keystone<T>(T dbContext, string baseDir) where T : DbContext
 
         return sb.ToString();
     }
+
+    private sealed class ValueConverter : JsonConverter<KeystoneJsValue>
+    {
+        public override bool CanConvert(Type typeToConvert) => typeToConvert.IsAssignableTo(this.Type);
+        
+        public override KeystoneJsValue? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, KeystoneJsValue value, JsonSerializerOptions options)
+        {
+            writer.WriteRawValue(JsonSerializer.Serialize(value.Value, options), true);
+        }
+    }
     
     private sealed class ObjectConverter : JsonConverter<KeystoneJsObject>
     {
@@ -135,8 +138,15 @@ public sealed class Keystone<T>(T dbContext, string baseDir) where T : DbContext
 
         public override void Write(Utf8JsonWriter writer, KeystoneJsObject value, JsonSerializerOptions options)
         {
-            var obj = Utils.ToCamelCase(value.Imports.ToString());
-            writer.WriteRawValue($"{obj}.{value.Name}", true);
+            if (value.Imports != null)
+            {
+                var obj = Utils.ToCamelCase(value.Imports.Value);
+                writer.WriteRawValue($"{obj}.{value.Name}", true);
+            }
+            else
+            {
+                writer.WriteRawValue(value.Name, true);
+            }
         }
     }
     
@@ -167,9 +177,9 @@ public sealed class Keystone<T>(T dbContext, string baseDir) where T : DbContext
 
         public override void Write(Utf8JsonWriter writer, KeystoneJsFunctionCall value, JsonSerializerOptions options)
         {
-            var inline = JsonSerializer.Serialize(value.Args, new JsonSerializerOptions(options) { WriteIndented = false });
+            var inline = JsonSerializer.Serialize(value.Arguments, new JsonSerializerOptions(options) { WriteIndented = false });
             var multiline = inline.Length > 150;
-            var args = multiline ? JsonSerializer.Serialize(value.Args, new JsonSerializerOptions(options) { WriteIndented = true }) : inline;
+            var args = multiline ? JsonSerializer.Serialize(value.Arguments, new JsonSerializerOptions(options) { WriteIndented = true }) : inline;
 
             if (args.Length >= 2 && args[0] == '[' && args[^1] == ']')
                 args = args[1..^1];
@@ -184,10 +194,5 @@ public sealed class Keystone<T>(T dbContext, string baseDir) where T : DbContext
             
             writer.WriteRawValue($"{obj}.{value.Name}({args})", true);
         }
-    }
-
-    private sealed class CamelCase : JsonNamingPolicy
-    {
-        public override string ConvertName(string str) => Utils.ToCamelCase(str);
     }
 }

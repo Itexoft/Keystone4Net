@@ -1,522 +1,775 @@
-namespace Keystone4Net.Entities;
+using System.Numerics;
+using System.Reflection;
+using System.Runtime.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Keystone4Net.Common;
+using Microsoft.EntityFrameworkCore;
 
-public class KeystoneBigIntFieldOptions : KeystoneFieldOptions
+public enum KeystoneImportObjects
 {
-    public long? DefaultValue { get; set; }
-    internal KeystoneBigIntDbOptions? Db { get; set; }
-    public KeystoneBigIntValidationOptions? Validation { get; set; }
+    Core,
+    Access,
+    Fields,
+    Session,
+    Graphql
 }
 
-internal class KeystoneBigIntDbOptions
+public enum KeystoneCookieSameSite
 {
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
+    Lax,
+    Strict,
+    None
 }
 
-public class KeystoneBigIntValidationOptions
+public enum KeystoneDbProvider
 {
-    public bool IsRequired { get; set; }
-    public long? Min { get; set; }
-    public long? Max { get; set; }
+    Sqlite,
+    Postgresql,
+    Mysql
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystoneBytesFieldOptions : KeystoneFieldOptions
+public enum KeystoneRelationshipDisplayMode
 {
-    public byte[]? DefaultValue { get; set; }
-    internal KeystoneBytesDbOptions? Db { get; set; }
+    Select,
+    Cards,
+    Count
 }
 
-internal class KeystoneBytesDbOptions
+public enum KeystoneTextDisplayMode
 {
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
+    Input,
+    Textarea
 }
 
-namespace Keystone4Net.Entities;
+public enum KeystoneFieldMode
+{
+    Edit,
+    Read,
+    Hidden
+}
 
-public class KeystoneCalendarDayFieldOptions : KeystoneFieldOptions
+public enum KeystoneFieldPosition
+{
+    Form,
+    Sidebar
+}
+
+public enum KeystoneSortDirection
+{
+    [JsonStringEnumMemberName("ASC")] Asc,
+    [JsonStringEnumMemberName("DESC")] Desc
+}
+
+public enum KeystoneSelectValueType
+{
+    String,
+    Enum,
+    Integer
+}
+
+public enum KeystoneRemoveMode
+{
+    Disconnect,
+    None
+}
+
+public enum KeystoneStorageKind
+{
+    Local,
+    S3
+}
+
+public enum KeystoneStorageType
+{
+    File,
+    Image
+}
+
+public abstract class KeystoneJsValue
+{
+    internal object? Value { get; }
+    private protected KeystoneJsValue(object? value) => this.Value = value;
+    public override string? ToString() => this.Value?.ToString();
+}
+
+public class KeystoneJsValue<T1, T2> : KeystoneJsValue
+{
+    private protected KeystoneJsValue(object? value) : base(value) { }
+    public static implicit operator KeystoneJsValue<T1, T2>(T1 value) => new(value);
+    public static implicit operator KeystoneJsValue<T1, T2>(T2 value) => new(value);
+
+}
+
+public class KeystoneJsValue<T1, T2, T3> : KeystoneJsValue<T1, T2>
+{
+    private protected KeystoneJsValue(object? value) : base(value) { }
+    public static implicit operator KeystoneJsValue<T1, T2, T3>(T3 value) => new(value);
+}
+
+public class KeystoneJsObject(KeystoneImportObjects? imports, string name)
+{
+    public KeystoneJsObject(string name) : this(null, name) { }
+
+    public KeystoneImportObjects? Imports { get; } = imports;
+
+    public string Name { get; } = name;
+
+    public override string ToString()
+    {
+        return this.Name;
+    }
+}
+
+public sealed class KeystoneJsFunction(string body, params string[] args)
+{
+    public string Body { get; } = body;
+
+    public string[] Args { get; } = args;
+    
+    public static implicit operator KeystoneJsFunction(bool body) => new(body.ToString().ToLower());
+}
+
+public abstract class KeystoneJsFunctionCall(KeystoneImportObjects imports, string name)
+{
+    public KeystoneImportObjects Imports { get; } = imports;
+
+    public string Name { get; } = name;
+
+    public abstract object?[] Arguments { get; }
+}
+
+public abstract class KeystoneJsFunctionPropArgCall : KeystoneJsFunctionCall
+{
+    private readonly PropertyInfo[] props;
+
+    protected KeystoneJsFunctionPropArgCall(KeystoneImportObjects imports, string name) : base(imports, name)
+    {
+        this.props = this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public)
+            .Where(p => p.Name is not (nameof(this.Arguments) or nameof(this.Name) or nameof(this.Imports))).ToArray();
+    }
+
+    public override object?[] Arguments =>
+    [
+        this.props.Select(p => (Utils.ToCamelCase(p.Name), p.GetValue(this))).Where(x => x.Item2 != null)
+            .ToDictionary(x => x.Item1, x => x.Item2)
+    ];
+}
+
+public sealed class KeystoneFieldAccess(string name) : KeystoneJsObject(KeystoneImportObjects.Access, Utils.ToCamelCase(name))
+{
+    public static KeystoneFieldAccess AllowAll { get; } = new(nameof(AllowAll));
+
+    public static KeystoneFieldAccess DenyAll { get; } = new(nameof(DenyAll));
+}
+
+public sealed class KeystoneListAccess(string name) : KeystoneJsObject(KeystoneImportObjects.Access, Utils.ToCamelCase(name))
+{
+    public static KeystoneListAccess AllowAll { get; } = new(nameof(AllowAll));
+
+    public static KeystoneListAccess DenyAll { get; } = new(nameof(DenyAll));
+}
+
+public sealed class KeystoneFieldGraphqlIsNonNull
+{
+    public bool? Read { get; set; }
+
+    public bool? Create { get; set; }
+
+    public bool? Update { get; set; }
+}
+
+public sealed class KeystoneGraphqlOmit
+{
+    public bool? Read { get; set; }
+
+    public bool? Create { get; set; }
+
+    public bool? Update { get; set; }
+
+    public bool? Delete { get; set; }
+}
+
+public sealed class KeystoneFieldCreateViewOptions
+{
+    public KeystoneJsValue<KeystoneFieldMode, KeystoneJsFunction>? FieldMode { get; set; }
+}
+
+public sealed class KeystoneFieldItemViewOptions
+{
+    public KeystoneJsValue<KeystoneFieldMode, KeystoneJsFunction>? FieldMode { get; set; }
+
+    public KeystoneFieldPosition? FieldPosition { get; set; }
+}
+
+public sealed class KeystoneFieldListViewOptions
+{
+    public KeystoneJsValue<KeystoneFieldMode, KeystoneJsFunction>? FieldMode { get; set; }
+}
+
+public abstract class KeystoneFieldUiOptions
+{
+    public string? Views { get; set; }
+
+    public KeystoneFieldCreateViewOptions? CreateView { get; set; }
+
+    public KeystoneFieldItemViewOptions? ItemView { get; set; }
+
+    public KeystoneFieldListViewOptions? ListView { get; set; }
+}
+
+public abstract class FieldDbOptions
+{
+    internal string? Map { get; set; }
+
+    internal bool? IsNullable { get; set; }
+}
+
+public abstract class KeystoneField<TDb, TUi>(string n) : KeystoneField(n, new TDb()) 
+    where TDb : FieldDbOptions, new() 
+    where TUi : KeystoneFieldUiOptions
+{
+    public new TDb Db => (TDb)base.Db;
+
+    public TUi? Ui { get; set; }
+}
+
+public sealed class KeystoneLengthOptions
+{
+    public int? Min { get; set; }
+
+    public int? Max { get; set; }
+}
+
+public sealed class KeystoneMatchOptions
+{
+    public string Regex { get; set; } = string.Empty;
+
+    public string? Explanation { get; set; }
+}
+
+public sealed class KeystoneTextDbOptions : FieldDbOptions
+{
+    public string? NativeType { get; set; }
+}
+
+public sealed class KeystoneTextValidation
+{
+    public bool? IsRequired { get; set; }
+
+    public KeystoneLengthOptions? Length { get; set; }
+
+    public KeystoneMatchOptions? Match { get; set; }
+}
+
+public sealed class KeystoneTextUiOptions : KeystoneFieldUiOptions
+{
+    public KeystoneTextDisplayMode? DisplayMode { get; set; }
+}
+
+public sealed class KeystoneTextField() : KeystoneField<KeystoneTextDbOptions, KeystoneTextUiOptions>("text")
 {
     public string? DefaultValue { get; set; }
-    internal KeystoneCalendarDayDbOptions? Db { get; set; }
-    public KeystoneCalendarDayValidationOptions? Validation { get; set; }
+
+    public KeystoneTextValidation? Validation { get; set; }
 }
 
-internal class KeystoneCalendarDayDbOptions
+public sealed class KeystonePasswordDbOptions : FieldDbOptions
 {
-    public bool? IsNullable { get; set; }
 }
 
-public class KeystoneCalendarDayValidationOptions
+public sealed class KeystonePasswordValidation
 {
-    public bool IsRequired { get; set; }
+    public bool? IsRequired { get; set; }
+
+    public KeystoneLengthOptions? Length { get; set; }
+
+    public KeystoneMatchOptions? Match { get; set; }
+
+    public bool? RejectCommon { get; set; }
 }
 
-namespace Keystone4Net.Entities;
+public sealed class KeystonePasswordField() : KeystoneField<KeystonePasswordDbOptions, KeystoneFieldUiOptions>("password")
+{
+    public KeystonePasswordValidation? Validation { get; set; }
 
-public class KeystoneCheckboxFieldOptions : KeystoneFieldOptions
+    public KeystoneJsFunction? Bcrypt { get; set; }
+}
+
+public sealed class KeystoneCheckboxDbOptions : FieldDbOptions
+{
+}
+
+public sealed class KeystoneCheckboxField() : KeystoneField<KeystoneCheckboxDbOptions, KeystoneFieldUiOptions>("checkbox")
 {
     public bool? DefaultValue { get; set; }
-    internal KeystoneCheckboxDbOptions? Db { get; set; }
 }
 
-internal class KeystoneCheckboxDbOptions
+public sealed class KeystoneIntegerDbOptions : FieldDbOptions
 {
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystoneCloudinaryImageFieldOptions : KeystoneFieldOptions
+public sealed class KeystoneIntegerValidation
 {
-    internal KeystoneCloudinaryDbOptions? Db { get; set; }
-    public KeystoneCloudinaryCredentials Cloudinary { get; set; } = new();
+    public bool? IsRequired { get; set; }
+
+    public int? Min { get; set; }
+
+    public int? Max { get; set; }
 }
 
-internal class KeystoneCloudinaryDbOptions
+public sealed class KeystoneIntegerField() : KeystoneField<KeystoneIntegerDbOptions, KeystoneFieldUiOptions>("integer")
 {
-    public string? Map { get; set; }
+    public KeystoneJsValue<int, KeystoneFieldDefaultValue>? DefaultValue { get; set; }
+
+    public KeystoneIntegerValidation? Validation { get; set; }
 }
 
-public class KeystoneCloudinaryCredentials
+public sealed class KeystoneBigIntDbOptions : FieldDbOptions
 {
-    public string CloudName { get; set; } = string.Empty;
-    public string ApiKey { get; set; } = string.Empty;
-    public string ApiSecret { get; set; } = string.Empty;
-    public string? Folder { get; set; }
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystoneDecimalFieldOptions : KeystoneFieldOptions
+public sealed class KeystoneBigIntValidation
 {
-    public decimal? DefaultValue { get; set; }
-    internal KeystoneDecimalDbOptions? Db { get; set; }
-    public KeystoneDecimalValidationOptions? Validation { get; set; }
+    public bool? IsRequired { get; set; }
+
+    public BigInteger? Min { get; set; }
+
+    public BigInteger? Max { get; set; }
 }
 
-internal class KeystoneDecimalDbOptions
+public sealed class KeystoneBigIntField() : KeystoneField<KeystoneBigIntDbOptions, KeystoneFieldUiOptions>("bigInt")
 {
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
+    public KeystoneJsValue<BigInteger, KeystoneFieldDefaultValue>? DefaultValue { get; set; }
+
+    public KeystoneBigIntValidation? Validation { get; set; }
 }
 
-public class KeystoneDecimalValidationOptions
+public sealed class KeystoneFloatDbOptions : FieldDbOptions
 {
-    public bool IsRequired { get; set; }
-    public decimal? Min { get; set; }
-    public decimal? Max { get; set; }
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystoneDocumentField : KeystoneField
+public sealed class KeystoneFloatValidation
 {
-    public KeystoneDocumentField() : base("document")
-    {
-    }
-    internal KeystoneDocumentDbOptions? Db { get; set; }
-    public object? Relationships { get; set; }
-    public object? ComponentBlocks { get; set; }
-    public object? Formatting { get; set; }
-    public object? Links { get; set; }
-    public bool? Dividers { get; set; }
-    public int[][]? Layouts { get; set; }
-}
+    public bool? IsRequired { get; set; }
 
-internal class KeystoneDocumentDbOptions
-{
-    public string? Map { get; set; }
-}
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneFileField : KeystoneField
-{
-    public KeystoneFileField() : base("file")
-    {
-    }
-    public string Storage { get; set; } = string.Empty;
-}
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneFloatFieldOptions : KeystoneFieldOptions
-{
-    public double? DefaultValue { get; set; }
-    internal KeystoneFloatDbOptions? Db { get; set; }
-    public KeystoneFloatValidationOptions? Validation { get; set; }
-}
-
-internal class KeystoneFloatDbOptions
-{
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
-}
-
-public class KeystoneFloatValidationOptions
-{
-    public bool IsRequired { get; set; }
     public double? Min { get; set; }
+
     public double? Max { get; set; }
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystoneImageField : KeystoneField
+public sealed class KeystoneFloatField() : KeystoneField<KeystoneFloatDbOptions, KeystoneFieldUiOptions>("float")
 {
-    public KeystoneImageField() : base("image")
-    {
-    }
+    public double? DefaultValue { get; set; }
+
+    public KeystoneFloatValidation? Validation { get; set; }
+}
+
+public sealed class KeystoneDecimalDbOptions : FieldDbOptions
+{
+}
+
+public sealed class KeystoneDecimalValidation
+{
+    public bool? IsRequired { get; set; }
+
+    public string? Min { get; set; }
+
+    public string? Max { get; set; }
+}
+
+public sealed class KeystoneDecimalField() : KeystoneField<KeystoneDecimalDbOptions, KeystoneFieldUiOptions>("decimal")
+{
+    public string? DefaultValue { get; set; }
+
+    public int? Precision { get; set; }
+
+    public int? Scale { get; set; }
+
+    public KeystoneDecimalValidation? Validation { get; set; }
+}
+
+public sealed class KeystoneJsonDbOptions : FieldDbOptions
+{
+}
+
+public sealed class KeystoneJsonField() : KeystoneField<KeystoneJsonDbOptions, KeystoneFieldUiOptions>("json")
+{
+    public JsonElement? DefaultValue { get; set; }
+}
+
+public sealed class KeystoneCalendarDayDbOptions : FieldDbOptions
+{
+}
+
+public sealed class KeystoneCalendarDayValidation
+{
+    public bool? IsRequired { get; set; }
+}
+
+public sealed class KeystoneCalendarDayField() : KeystoneField<KeystoneCalendarDayDbOptions, KeystoneFieldUiOptions>("calendarDay")
+{
+    public string? DefaultValue { get; set; }
+
+    public KeystoneCalendarDayValidation? Validation { get; set; }
+}
+
+public sealed class KeystoneTimestampDbOptions : FieldDbOptions
+{
+    public bool? UpdatedAt { get; set; }
+}
+
+public sealed class KeystoneTimestampValidation
+{
+    public bool? IsRequired { get; set; }
+}
+
+
+public sealed class KeystoneTimestampField() : KeystoneField<KeystoneTimestampDbOptions, KeystoneFieldUiOptions>("timestamp")
+{
+    public KeystoneJsValue<string, KeystoneFieldDefaultValue>? DefaultValue { get; set; }
+
+    public KeystoneTimestampValidation? Validation { get; set; }
+}
+
+public sealed class KeystoneSelectDbOptions : FieldDbOptions
+{
+}
+
+public sealed class KeystoneSelectValidation
+{
+    public bool? IsRequired { get; set; }
+}
+
+public sealed class KeystoneSelectOption
+{
+    public required string Label { get; set; }
+
+    public required KeystoneJsValue<string, int> Value { get; set; }
+}
+
+public enum KeystoneSelectUiMode
+{
+    Select,
+    [JsonStringEnumMemberName("segmented-control")] SegmentedControl,
+    Radio
+}
+
+public sealed class KeystoneSelectUiOptions : KeystoneFieldUiOptions
+{
+    public KeystoneSelectUiMode? DisplayMode { get; set; }
+}
+
+public sealed class KeystoneSelectField() : KeystoneField<KeystoneSelectDbOptions, KeystoneSelectUiOptions>("select")
+{
+    public KeystoneSelectValueType? Type { get; set; }
+
+    public KeystoneJsValue<string, int>? DefaultValue { get; set; }
+
+    public KeystoneSelectOption[] Options { get; set; } = [];
+
+    public KeystoneSelectValidation? Validation { get; set; }
+}
+
+public sealed class KeystoneMultiselectDbOptions : FieldDbOptions
+{
+}
+
+public sealed class KeystoneMultiselectField() : KeystoneField<KeystoneMultiselectDbOptions, KeystoneFieldUiOptions>("multiselect")
+{
+    public KeystoneSelectValueType? Type { get; set; }
+
+    public KeystoneJsValue<string, int>[]? DefaultValue { get; set; }
+
+    public KeystoneSelectOption[] Options { get; set; } = [];
+}
+
+public sealed class KeystoneForeignKeyOptions
+{
+    public string? Map { get; set; }
+}
+
+public sealed class KeystoneRelationshipDbOptions : FieldDbOptions
+{
+    public KeystoneJsValue<bool, KeystoneForeignKeyOptions>? ForeignKey { get; set; }
+}
+
+public sealed class KeystoneInlineCreateOptions
+{
+    public string[] Fields { get; set; } = [];
+}
+
+public sealed class KeystoneInlineConnectOptions
+{
+    public string? LabelField { get; set; }
+
+    public string[]? SearchFields { get; set; }
+}
+
+public sealed class KeystoneRelationshipUiOptions : KeystoneFieldUiOptions
+{
+    public bool? HideCreate { get; set; }
+
+    public KeystoneRelationshipDisplayMode? DisplayMode { get; set; }
+
+    public string? LabelField { get; set; }
+
+    public string[]? SearchFields { get; set; }
+
+    public string[]? CardFields { get; set; }
+
+    public bool? LinkToItem { get; set; }
+
+    public KeystoneRemoveMode? RemoveMode { get; set; }
+
+    public KeystoneInlineCreateOptions? InlineCreate { get; set; }
+
+    public KeystoneInlineCreateOptions? InlineEdit { get; set; }
+
+    public KeystoneJsValue<bool, KeystoneInlineConnectOptions>? InlineConnect { get; set; }
+}
+
+public sealed class KeystoneRelationshipField()
+    : KeystoneField<KeystoneRelationshipDbOptions, KeystoneRelationshipUiOptions>("relationship")
+{
+    public string Ref { get; set; } = string.Empty;
+
+    public bool? Many { get; set; }
+}
+
+public sealed class KeystoneEmptyDbOptions : FieldDbOptions
+{
+}
+
+public sealed class KeystoneFileField() : KeystoneField<KeystoneEmptyDbOptions, KeystoneFieldUiOptions>("file")
+{
     public string Storage { get; set; } = string.Empty;
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystoneIntegerFieldOptions : KeystoneFieldOptions
+public sealed class KeystoneImageField() : KeystoneField<KeystoneEmptyDbOptions, KeystoneFieldUiOptions>("image")
 {
-    public int? DefaultValue { get; set; }
-    internal KeystoneIntegerDbOptions? Db { get; set; }
-    public KeystoneIntegerValidationOptions? Validation { get; set; }
+    public string Storage { get; set; } = string.Empty;
 }
 
-internal class KeystoneIntegerDbOptions
+public sealed class KeystoneCloudinaryCredentials
 {
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
+    public string CloudName { get; set; } = string.Empty;
+
+    public string ApiKey { get; set; } = string.Empty;
+
+    public string ApiSecret { get; set; } = string.Empty;
+
+    public string? Folder { get; set; }
 }
 
-public class KeystoneIntegerValidationOptions
+public sealed class KeystoneCloudinaryImageField() : KeystoneField<KeystoneEmptyDbOptions, KeystoneFieldUiOptions>("cloudinaryImage")
 {
-    public bool IsRequired { get; set; }
-    public int? Min { get; set; }
-    public int? Max { get; set; }
+    public KeystoneCloudinaryCredentials Cloudinary { get; set; } = new();
 }
 
-using System.Text.Json;
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneJsonFieldOptions : KeystoneFieldOptions
+public sealed class KeystoneDocumentDbOptions : FieldDbOptions
 {
-    public JsonElement? DefaultValue { get; set; }
-    internal KeystoneJsonDbOptions? Db { get; set; }
 }
 
-internal class KeystoneJsonDbOptions
+public enum KeystoneDocumentRelationshipKind
 {
-    public string? Map { get; set; }
+    Inline,
+    Block,
+    Prop
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystoneMultiselectFieldOptions : KeystoneFieldOptions
+public sealed class KeystoneDocumentRelationship
 {
-    public string[]? DefaultValue { get; set; }
-    public KeystoneSelectOption[]? Options { get; set; }
-    internal KeystoneMultiselectDbOptions? Db { get; set; }
+    public KeystoneDocumentRelationshipKind Kind { get; set; }
+    public required string ListKey { get; set; }
+
+    public required string Label { get; set; }
+
+    public string? Selection { get; set; }
 }
 
-internal class KeystoneMultiselectDbOptions
+public sealed class KeystoneDocumentFormattingInlineMarks
 {
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
+    public bool? Bold { get; set; }
+
+    public bool? Italic { get; set; }
+
+    public bool? Underline { get; set; }
+
+    public bool? Strikethrough { get; set; }
+
+    public bool? Code { get; set; }
+
+    public bool? Superscript { get; set; }
+
+    public bool? Subscript { get; set; }
+
+    public bool? Keyboard { get; set; }
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystonePasswordFieldOptions : KeystoneFieldOptions
+public sealed class KeystoneDocumentFormattingOptions
 {
-    public string? DefaultValue { get; set; }
-    internal KeystonePasswordDbOptions? Db { get; set; }
-    public KeystonePasswordValidationOptions? Validation { get; set; }
+    public KeystoneDocumentFormattingInlineMarks? InlineMarks { get; set; }
+    public KeystoneDocumentFormattingListTypes? ListTypes { get; set; }
+    public KeystoneDocumentFormattingAlignment? Alignment { get; set; }
+    public List<int> HeadingLevels { get; set; } = [];
+    public KeystoneDocumentFormattingBlockTypes? BlockTypes { get; set; }
+    public bool? SoftBreaks { get; set; }
 }
 
-internal class KeystonePasswordDbOptions
+public class KeystoneDocumentFormattingListTypes
 {
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
+    public bool? Ordered { get; set; }
+    public bool? Unordered { get; set; }
 }
 
-public class KeystonePasswordValidationOptions
+public class KeystoneDocumentFormattingAlignment
 {
-    public bool IsRequired { get; set; }
-    public bool RejectCommon { get; set; }
-    public KeystoneTextMatchOptions? Match { get; set; }
-    public KeystoneTextLengthOptions? Length { get; set; }
+    public bool? Center { get; set; }
+    public bool? End { get; set; }
 }
 
-namespace Keystone4Net.Entities;
-
-public class KeystoneRelationshipField : KeystoneField<KeystoneRelationshipUiOptions>
+public class KeystoneDocumentFormattingBlockTypes
 {
-    public KeystoneRelationshipField() : base("relationship")
-    {
-    }
-    public bool? Many { get; set; }
-    public string Ref { get; set; } = string.Empty;
-    internal KeystoneRelationshipDbOptions? Db { get; set; }
+    public bool? Blockquote { get; set; }
+    public bool? Code { get; set; }
 }
 
-internal class KeystoneRelationshipDbOptions
+public sealed class KeystoneDocumentLinksOptions
 {
-    public string? RelationName { get; set; }
-    public object? ForeignKey { get; set; }
+    public bool? Anchor { get; set; }
 }
 
-public class KeystoneRelationshipUiOptions
+public sealed class KeystoneDocumentField() : KeystoneField<KeystoneDocumentDbOptions, KeystoneFieldUiOptions>("document")
 {
-    public bool? HideCreate { get; set; }
-    public KeystoneDisplayMode? DisplayMode { get; set; }
-    public string? LabelField { get; set; }
-    public string[]? SearchFields { get; set; }
-    public string[]? CardFields { get; set; }
-    public bool? LinkToItem { get; set; }
-    public KeystoneRemoveMode? RemoveMode { get; set; }
-    public KeystoneInlineCreateOptions? InlineCreate { get; set; }
-    public KeystoneInlineEditOptions? InlineEdit { get; set; }
-    public KeystoneInlineConnectOptions? InlineConnect { get; set; }
+    public Dictionary<string, KeystoneDocumentRelationship>? Relationships { get; set; }
+
+    public Dictionary<string, object>? ComponentBlocks { get; set; }
+
+    public KeystoneJsValue<bool, KeystoneDocumentFormattingOptions>? Formatting { get; set; }
+
+    public KeystoneJsValue<bool, KeystoneDocumentLinksOptions>? Links { get; set; }
+
+    public bool? Dividers { get; set; }
+
+    public int[][]? Layouts { get; set; }
 }
 
-public class KeystoneInlineCreateOptions
-{
-    public string[] Fields { get; set; } = [];
-}
-
-public class KeystoneInlineEditOptions
-{
-    public string[] Fields { get; set; } = [];
-}
-
-public class KeystoneInlineConnectOptions
-{
-    public string? LabelField { get; set; }
-    public string[]? SearchFields { get; set; }
-}
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneSelectFieldOptions : KeystoneFieldOptions
-{
-    public string? DefaultValue { get; set; }
-    public KeystoneSelectOption[]? Options { get; set; }
-    internal KeystoneSelectDbOptions? Db { get; set; }
-    public KeystoneSelectValidationOptions? Validation { get; set; }
-}
-
-public class KeystoneSelectOption
-{
-    public string Label { get; set; } = string.Empty;
-    public string Value { get; set; } = string.Empty;
-}
-
-internal class KeystoneSelectDbOptions
-{
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
-}
-
-public class KeystoneSelectValidationOptions
-{
-    public bool IsRequired { get; set; }
-}
-
-using Keystone4Net.Enums;
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneTextFieldOptions : KeystoneFieldOptions<KeystoneTextUiOptions>
-{
-    public string? DefaultValue { get; set; }
-    internal KeystoneTextDbOptions? Db { get; set; }
-    public KeystoneTextValidationOptions? Validation { get; set; }
-}
-
-public class KeystoneTextValidationOptions
-{
-    public bool IsRequired { get; set; }
-    public KeystoneTextLengthOptions? Length { get; set; }
-    public KeystoneTextMatchOptions? Match { get; set; }
-}
-
-public class KeystoneTextLengthOptions
-{
-    public int Min { get; set; }
-    public int? Max { get; set; }
-}
-
-internal class KeystoneTextDbOptions
-{
-    public string? Map { get; set; }
-    public bool IsNullable { get; set; }
-    public string? NativeType { get; set; }
-    public KeystoneJsFunction? ExtendPrismaSchema { get; set; }
-}
-
-public class KeystoneTextUiOptions : KeystoneFieldUiOptions
-{
-    public KeystoneDisplayMode DisplayMode { get; set; }
-}
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneTimestampFieldOptions : KeystoneFieldOptions
-{
-    public DateTime? DefaultValue { get; set; }
-    internal KeystoneTimestampDbOptions? Db { get; set; }
-    public KeystoneTimestampValidationOptions? Validation { get; set; }
-}
-
-internal class KeystoneTimestampDbOptions
-{
-    public bool? IsNullable { get; set; }
-    public string? Map { get; set; }
-}
-
-public class KeystoneTimestampValidationOptions
-{
-    public bool IsRequired { get; set; }
-}
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneVirtualField : KeystoneField<KeystoneVirtualUiOptions>
-{
-    public KeystoneVirtualField() : base("virtual")
-    {
-    }
-    public KeystoneJsFunction? Field { get; set; }
-}
-
-public class KeystoneVirtualUiOptions : KeystoneFieldUiOptions
+public sealed class KeystoneVirtualUiOptions : KeystoneFieldUiOptions
 {
     public string? Query { get; set; }
 }
 
-namespace Keystone4Net.Entities;
+public class KeystoneGraphqlObject(string name) : KeystoneJsObject(KeystoneImportObjects.Graphql, name);
 
-public interface IKeystone
+public class KeystoneGraphqlField() : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Graphql, "field")
 {
-    void ConfigureKeystone(KeystoneConfig config);
+    public required KeystoneGraphqlObject Type { get; set; }
+    public Dictionary<string, KeystoneGraphqlObject>? Args { get; set; }
+    public required KeystoneJsFunction Resolve { get; set; }
 }
 
-using Keystone4Net.Common;
-using Keystone4Net.Enums;
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneFieldAccess(string name) : KeystoneJsObject(KeystoneImportObjects.Access, Utils.ToCamelCase(name))
+public sealed class KeystoneVirtualField() : KeystoneField<KeystoneEmptyDbOptions, KeystoneVirtualUiOptions>("virtual")
 {
-    public static KeystoneFieldAccess AllowAll { get; } = new(nameof(AllowAll));
-    public static KeystoneFieldAccess DenyAll { get; } = new(nameof(DenyAll));
-    public static KeystoneFieldAccess AllOperations { get; } = new(nameof(AllOperations));
-    public static KeystoneFieldAccess Unfiltered { get; } = new(nameof(Unfiltered));
+    public required KeystoneGraphqlField Field { get; set; }
 }
 
-public class KeystoneListAccess(string name) : KeystoneJsObject(KeystoneImportObjects.Access, Utils.ToCamelCase(name))
+public sealed class KeystoneResolveInputHooks
 {
-    public static KeystoneListAccess AllowAll { get; } = new(nameof(AllowAll));
-    public static KeystoneListAccess DenyAll { get; } = new(nameof(DenyAll));
-    public static KeystoneListAccess AllOperations { get; } = new(nameof(AllOperations));
-    public static KeystoneListAccess Unfiltered { get; } = new(nameof(Unfiltered));
+    public KeystoneJsFunction? Create { get; set; }
+
+    public KeystoneJsFunction? Update { get; set; }
 }
 
-using Keystone4Net.Enums;
-using Microsoft.EntityFrameworkCore;
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneConfig : KeystoneJsFunctionPropArgCall
+public sealed class KeystoneValidateInputHooks
 {
-    internal KeystoneConfig(DbContext dbContext, string? baseDir) : base(KeystoneImportObjects.Core, "config", null)
-    {
-        this.Db = new(dbContext, baseDir);
-    }
+    public KeystoneJsFunction? Create { get; set; }
 
-    internal KeystoneDb Db { get; }
+    public KeystoneJsFunction? Update { get; set; }
 
-    public KeystoneTypesConfig? Types { get; set; }
-
-    public KeystoneGraphqlOptions? Graphql { get; set; }
-
-    public KeystoneServerOptions? Server { get; set; }
-
-    public KeystoneSession? Session { get; set; }
-
-    public KeystoneUiSettings? Ui { get; set; }
-
-    public KeystoneJsFunction? ExtendGraphqlSchema { get; set; }
-
-    public Dictionary<string, KeystoneStorageConfig>? Storage { get; set; }
-
-    public bool Telemetry { get; set; }
-
-    public Dictionary<string, KeystoneList> Lists { get; } = [];
-
-    public void Add<T>(KeystoneList<T> value)
-    {
-        var typeName = typeof(T).Name;
-        this.Lists.Add(typeName, value);
-    }
+    public KeystoneJsFunction? Delete { get; set; }
 }
 
-using System.Reflection;
-using Keystone4Net.Common;
-using Keystone4Net.Enums;
-using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneListInitialSortOptions
+public sealed class KeystoneOperationHooks
 {
-    public string Field { get; set; } = string.Empty;
+    public KeystoneJsFunction? Create { get; set; }
+
+    public KeystoneJsFunction? Update { get; set; }
+
+    public KeystoneJsFunction? Delete { get; set; }
+}
+
+public sealed class KeystoneFieldHooks
+{
+    public KeystoneResolveInputHooks? ResolveInput { get; set; }
+
+    public KeystoneValidateInputHooks? ValidateInput { get; set; }
+
+    public KeystoneOperationHooks? BeforeOperation { get; set; }
+
+    public KeystoneOperationHooks? AfterOperation { get; set; }
+}
+
+public sealed class KeystoneListDb
+{
+    public string? Map { get; set; }
+
+    public KeystoneIdFieldOptions? IdField { get; set; }
+    
+    public KeystoneJsFunction? ExtendPrismaSchema { get; set; }
+}
+
+public sealed class KeystoneCreateViewOptions
+{
+    public KeystoneJsValue<KeystoneFieldMode, KeystoneJsFunction>? DefaultFieldMode { get; set; }
+}
+
+public sealed class KeystoneItemViewOptions
+{
+    public KeystoneJsValue<KeystoneFieldMode, KeystoneJsFunction>? DefaultFieldMode { get; set; }
+
+    public KeystoneFieldPosition? FieldPosition { get; set; }
+}
+
+public sealed class KeystoneListInitialSort
+{
+    public required string Field { get; set; }
 
     public KeystoneSortDirection Direction { get; set; }
 }
 
-public class KeystoneListViewOptions
+public sealed class KeystoneListViewOptions
 {
-    public KeystoneFieldMode? DefaultFieldMode { get; set; }
+    public KeystoneJsValue<KeystoneFieldMode, KeystoneJsFunction>? DefaultFieldMode { get; set; }
 
-    public string[] InitialColumns { get; set; } = [];
+    public string[]? InitialColumns { get; set; }
 
-    public KeystoneListInitialSortOptions? InitialSort { get; set; }
+    public KeystoneListInitialSort? InitialSort { get; set; }
 
     public int? PageSize { get; set; }
 }
 
-public class KeystoneViewOptions
+public sealed class KeystoneListUiOptions
 {
-    public KeystoneFieldMode DefaultFieldMode { get; set; }
-}
-
-public class KeystoneItemViewOptions : KeystoneViewOptions
-{
-    public KeystoneFieldPosition FieldPosition { get; set; }
-}
-
-public class KeystoneListUiOptions
-{
-    public string? Label { get; set; }
-
     public string? LabelField { get; set; }
 
     public string[]? SearchFields { get; set; }
 
     public string? Description { get; set; }
 
-    public KeystoneJsFunction? IsHidden { get; set; }
+    public KeystoneJsValue<bool, KeystoneJsFunction>? IsHidden { get; set; }
 
-    public KeystoneJsFunction? HideCreate { get; set; }
+    public KeystoneJsValue<bool, KeystoneJsFunction>? HideCreate { get; set; }
 
-    public KeystoneJsFunction? HideDelete { get; set; }
+    public KeystoneJsValue<bool, KeystoneJsFunction>? HideDelete { get; set; }
 
-    public KeystoneViewOptions? CreateView { get; set; }
+    public KeystoneCreateViewOptions? CreateView { get; set; }
 
     public KeystoneItemViewOptions? ItemView { get; set; }
 
     public KeystoneListViewOptions? ListView { get; set; }
+
+    public string? Label { get; set; }
 
     public string? Singular { get; set; }
 
@@ -525,34 +778,145 @@ public class KeystoneListUiOptions
     public string? Path { get; set; }
 }
 
-public class KeystoneFieldGraphqlIsNonNull
+public sealed class KeystoneOperationAccess
 {
-    public bool Read { get; set; }
+    public KeystoneJsFunction? Query { get; set; }
 
-    public bool Create { get; set; }
+    public KeystoneJsFunction? Create { get; set; }
 
-    public bool Update { get; set; }
+    public KeystoneJsFunction? Update { get; set; }
+
+    public KeystoneJsFunction? Delete { get; set; }
 }
 
-public class KeystoneFieldGraphqlOmit
+public sealed class KeystoneFilterAccess
 {
-    public bool Read { get; set; }
+    public KeystoneJsFunction? Query { get; set; }
 
-    public bool Create { get; set; }
+    public KeystoneJsFunction? Update { get; set; }
 
-    public bool Update { get; set; }
+    public KeystoneJsFunction? Delete { get; set; }
 }
 
-public class KeystoneFieldGraphqlOptions
+public sealed class KeystoneItemAccess
 {
-    public KeystoneGraphqlCacheHint? CacheHint { get; set; }
+    public KeystoneJsFunction? Create { get; set; }
 
-    public KeystoneFieldGraphqlIsNonNull? IsNonNull { get; set; }
+    public KeystoneJsFunction? Update { get; set; }
 
-    public KeystoneFieldGraphqlOmit? Omit { get; set; }
+    public KeystoneJsFunction? Delete { get; set; }
 }
 
-internal class KeystoneDb
+public sealed class KeystoneListAccessControl
+{
+    public KeystoneOperationAccess? Operation { get; set; }
+
+    public KeystoneFilterAccess? Filter { get; set; }
+
+    public KeystoneItemAccess? Item { get; set; }
+}
+
+public class KeystoneFieldAccessControl
+{
+    public KeystoneJsFunction? Read { get; set; }
+
+    public KeystoneJsFunction? Create { get; set; }
+
+    public KeystoneJsFunction? Update { get; set; }
+}
+
+public abstract class KeystoneList(Type t) : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Core, "list")
+{
+    [JsonIgnore] internal Type ClrType { get; } = t;
+
+    public KeystoneJsValue<KeystoneListAccess, KeystoneListAccessControl>? Access { get; set; }
+
+    public KeystoneListUiOptions? Ui { get; set; }
+
+    public KeystoneListGraphqlOptions? Graphql { get; set; }
+
+    public KeystoneFieldHooks? Hooks { get; set; }
+
+    public string? Description { get; set; }
+
+    public bool? IsSingleton { get; set; }
+
+    public bool? DefaultIsFilterable { get; set; }
+
+    public bool? DefaultIsOrderable { get; set; }
+
+    public KeystoneListDb Db { get; } = new();
+
+    public Dictionary<string, KeystoneField> Fields { get; } = new();
+
+    public string Add(string key, KeystoneField field)
+    {
+        key = Utils.ToCamelCase(key);
+        this.Fields.Add(key, field);
+
+        return key;
+    }
+}
+
+public sealed class KeystoneList<T>() : KeystoneList(typeof(T));
+
+public abstract class KeystoneSession(string name) : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Session, name);
+
+public abstract class KeystoneCookieSession(string n) : KeystoneSession(n)
+{
+    public required string Secret { get; set; }
+
+    public int? MaxAge { get; set; }
+
+    public string? CookieName { get; set; }
+
+    public bool? Secure { get; set; }
+
+    public string? Path { get; set; }
+
+    public string? Domain { get; set; }
+
+    public KeystoneJsValue<bool, KeystoneCookieSameSite>? SameSite { get; set; }
+}
+
+public sealed class KeystoneStatelessSession() : KeystoneCookieSession("statelessSessions");
+
+public sealed class KeystoneStoredSession() : KeystoneCookieSession("storedSessions")
+{
+    public KeystoneJsFunction? Store { get; set; }
+}
+
+public sealed class KeystoneStorageSigned
+{
+    public int Expiry { get; set; }
+}
+
+public sealed class KeystoneServerRoute
+{
+    public string Path { get; set; } = string.Empty;
+}
+
+public sealed class KeystoneStorageConfig
+{
+    public KeystoneStorageKind Kind { get; set; }
+    public KeystoneStorageType Type { get; set; }
+    public bool? Preserve { get; set; }
+    public KeystoneJsFunction? TransformName { get; set; }
+    public string? StoragePath { get; set; }
+    public KeystoneServerRoute? ServerRoute { get; set; }
+    public KeystoneJsFunction? GenerateUrl { get; set; }
+    public string? BucketName { get; set; }
+    public string? Region { get; set; }
+    public string? AccessKeyId { get; set; }
+    public string? SecretAccessKey { get; set; }
+    public string? Endpoint { get; set; }
+    public bool? ForcePathStyle { get; set; }
+    public string? PathPrefix { get; set; }
+    public KeystoneStorageSigned? Signed { get; set; }
+    public string? Acl { get; set; }
+}
+
+public sealed class KeystoneDb
 {
     public KeystoneDb(DbContext dbContext, string? baseDir)
     {
@@ -588,10 +952,10 @@ internal class KeystoneDb
             }
         }
     }
+    
+    public KeystoneDbProvider Provider { get; }
 
-    public KeystoneDbProvider Provider { get; set; }
-
-    public string Url { get; set; }
+    public string Url { get; }
 
     public KeystoneJsFunction? OnConnect { get; set; }
 
@@ -600,448 +964,185 @@ internal class KeystoneDb
     public KeystoneIdFieldOptions? IdField { get; set; }
 
     public string? ShadowDatabaseUrl { get; set; }
-
+    
     public KeystoneJsFunction? ExtendPrismaSchema { get; set; }
 }
 
-public class KeystoneTextMatchOptions
+public sealed class KeystoneGraphqlOptions
 {
-    public string Regex { get; set; } = string.Empty;
+    public bool? Debug { get; set; }
 
-    public string? Explanation { get; set; }
+    public string? Path { get; set; }
+
+    public KeystoneJsValue<bool, KeystoneGraphqlPlaygroundType>? Playground { get; set; }
+
+    public Dictionary<string, object>? ApolloConfig { get; set; }
+
+    public string? SchemaPath { get; set; }
 }
 
-public class KeystoneGraphqlCacheHint
+public enum KeystoneGraphqlPlaygroundType
 {
-    public int MaxAge { get; set; }
-
-    public string? Scope { get; set; }
+    Apollo
 }
 
-internal sealed class KeystoneListDb
+public sealed class KeystoneUiSettings
 {
-    public string? Map { get; set; }
-
-    public KeystoneIdFieldOptions? IdField { get; set; }
-
-    public KeystoneJsFunction? ExtendPrismaSchema { get; set; }
-}
-
-public class KeystoneIdFieldOptions
-{
-    public string Kind { get; set; } = string.Empty;
-
-    public string? Type { get; set; }
-
-    public int? Bytes { get; set; }
-
-    public string? Encoding { get; set; }
-
-    public int? Version { get; set; }
-
-    public int? Length { get; set; }
-}
-
-public class KeystoneGraphqlOmit
-{
-    public bool Query { get; set; }
-
-    public bool Create { get; set; }
-
-    public bool Update { get; set; }
-
-    public bool Delete { get; set; }
-}
-
-public class KeystoneListGraphqlOptions
-{
-    public string? Description { get; set; }
-
-    public string? Plural { get; set; }
-
-    public string? ItemQueryName { get; set; }
-
-    public string? ListQueryName { get; set; }
-
-    public int? MaxTake { get; set; }
-
-    public KeystoneGraphqlCacheHint? CacheHint { get; set; }
-
-    public KeystoneGraphqlOmit? Omit { get; set; }
-}
-
-
-public class KeystoneUiSettings
-{
-    public bool IsDisabled { get; set; }
+    public bool? IsDisabled { get; set; }
 
     public KeystoneJsFunction? IsAccessAllowed { get; set; }
 
     public string[]? PublicPages { get; set; }
 
-    public string? BasePath { get; set; }
-
     public KeystoneJsFunction? PageMiddleware { get; set; }
 
-    public KeystoneJsFunction? GetAdditionalFiles { get; set; }
+    public KeystoneJsFunction[]? GetAdditionalFiles { get; set; }
 }
 
-
-
-public class KeystoneIronOptions
+public class KeystoneCorsOptions : Dictionary<string, object>
 {
-    public Dictionary<string, object?>? Values { get; set; }
+    public KeystoneCorsOptions(
+        KeystoneJsValue<string, KeystoneJsObject, KeystoneJsValue<string, KeystoneJsObject>[]> origin,
+        bool? credentials = null)
+    {
+        base[nameof(origin)] = origin;
+        if (credentials != null)
+            base[nameof(credentials)] = credentials.Value;
+    }
 }
 
-public class KeystoneFieldUiOptions
+public sealed class KeystoneServerOptions
 {
-    public string? Views { get; set; }
-    public string? Description { get; set; }
-    public KeystoneViewOptions? CreateView { get; set; }
-    public KeystoneItemViewOptions? ItemView { get; set; }
-    public KeystoneViewOptions? ListView { get; set; }
-}
-public class KeystoneTypesConfig
-{
-    public string Path { get; set; } = string.Empty;
-}
+    public KeystoneCorsOptions? Cors { get; set; }
 
-public class KeystoneGraphqlOptions
-{
-    public bool? Debug { get; set; }
-    public string? Path { get; set; }
-    public object? Playground { get; set; }
-    public object? ApolloConfig { get; set; }
-    public string? SchemaPath { get; set; }
-}
-
-public class KeystoneServerOptions
-{
-    public object? Cors { get; set; }
     public int? Port { get; set; }
-    public object? Options { get; set; }
+
+    public Dictionary<string, object>? Options { get; set; }
+
     public int? MaxFileSize { get; set; }
+
     public KeystoneJsFunction? ExtendExpressApp { get; set; }
+
     public KeystoneJsFunction? ExtendHttpServer { get; set; }
 }
 
-public class KeystoneStorageConfig
+public sealed class KeystoneConfig(DbContext dbContext, string baseDir) : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Core, "config")
 {
-    public string Kind { get; set; } = string.Empty;
-    public string Type { get; set; } = string.Empty;
-    public bool? Preserve { get; set; }
-    public KeystoneJsFunction? TransformName { get; set; }
-    public KeystoneJsFunction? GenerateUrl { get; set; }
-    public KeystoneServerRoute? ServerRoute { get; set; }
-    public string? BucketName { get; set; }
-    public string? Region { get; set; }
-    public string? AccessKeyId { get; set; }
-    public string? SecretAccessKey { get; set; }
-    public string? PathPrefix { get; set; }
-    public string? Endpoint { get; set; }
-    public bool? ForcePathStyle { get; set; }
-    public KeystoneSignedOptions? Signed { get; set; }
-    public string? Acl { get; set; }
-}
+    public KeystoneDb Db { get; } = new(dbContext, baseDir);
 
-public class KeystoneServerRoute
-{
-    public string Path { get; set; } = string.Empty;
-}
+    public KeystoneGraphqlOptions? Graphql { get; set; }
 
-public class KeystoneSignedOptions
-{
-    public int Expiry { get; set; }
-}
+    public KeystoneServerOptions? Server { get; set; }
 
-using Keystone4Net.Common;
-using Keystone4Net.Enums;
+    public KeystoneSession? Session { get; set; }
 
-namespace Keystone4Net.Entities;
+    public KeystoneUiSettings? Ui { get; set; }
 
-public abstract class KeystoneField<TUiOptions> : KeystoneJsFunctionPropArgCall where TUiOptions : KeystoneFieldUiOptions
-{
-    protected KeystoneField(string name) : base(KeystoneImportObjects.Fields, name, null)
+    public KeystoneJsFunction? ExtendGraphqlSchema { get; set; }
+
+    public Dictionary<string, KeystoneStorageConfig>? Storage { get; set; }
+
+    public Dictionary<string, KeystoneList> Lists { get; } = new();
+
+    public void Add<T>(KeystoneList<T> list)
     {
-    }
-
-    public KeystoneFieldAccess? Access { get; set; }
-    public KeystoneFieldHooks? Hooks { get; set; }
-    public string? Label { get; set; }
-    public bool? IsFilterable { get; set; }
-    public bool? IsOrderable { get; set; }
-    public TUiOptions? Ui { get; set; }
-    public KeystoneIndex? IsIndexed { get; set; }
-    public KeystoneFieldGraphqlOptions? Graphql { get; set; }
-}
-
-public abstract class KeystoneField : KeystoneField<KeystoneFieldUiOptions>
-{
-    protected KeystoneField(string name) : base(name)
-    {
+        this.Lists[typeof(T).Name] = list;
     }
 }
 
-namespace Keystone4Net.Entities;
-
-public abstract class KeystoneHooks
+public enum KeystoneGraphqlCacheScope
 {
-    public KeystoneJsFunction? ResolveInput { get; set; }
-
-    public KeystoneJsFunction? ResolveInputCreate { get; set; }
-
-    public KeystoneJsFunction? ResolveInputUpdate { get; set; }
-
-    public KeystoneJsFunction? Validate { get; set; }
-
-    public KeystoneJsFunction? ValidateCreate { get; set; }
-
-    public KeystoneJsFunction? ValidateUpdate { get; set; }
-
-    public KeystoneJsFunction? ValidateDelete { get; set; }
-
-    public KeystoneJsFunction? BeforeOperation { get; set; }
-
-    public KeystoneJsFunction? BeforeOperationCreate { get; set; }
-
-    public KeystoneJsFunction? BeforeOperationUpdate { get; set; }
-
-    public KeystoneJsFunction? BeforeOperationDelete { get; set; }
-
-    public KeystoneJsFunction? AfterOperation { get; set; }
-
-    public KeystoneJsFunction? AfterOperationCreate { get; set; }
-
-    public KeystoneJsFunction? AfterOperationUpdate { get; set; }
-
-    public KeystoneJsFunction? AfterOperationDelete { get; set; }
+    [JsonStringEnumMemberName("PUBLIC")] Public,
+    [JsonStringEnumMemberName("PRIVATE")] Private
 }
 
-public class KeystoneListHooks : KeystoneHooks
+public enum KeystoneFieldDefaultValueKind
 {
+    Autoincrement,
+    Now
 }
 
-public class KeystoneFieldHooks : KeystoneHooks
+public class KeystoneFieldDefaultValue
 {
+    public KeystoneFieldDefaultValueKind Kind { get; set; }
 }
 
-using System.Reflection;
-using Keystone4Net.Common;
-using Keystone4Net.Enums;
-
-namespace Keystone4Net.Entities;
-
-public class KeystoneJsFunction(string body, params string[] args)
+public enum KeystoneIdFieldKind
 {
-    public KeystoneJsFunction(bool body, params string[] args) : this(body.ToString().ToLower(), args)
-    {
-    }
-
-    public string Body { get; } = body;
-
-    public string[] Args { get; } = args;
+    Cuid,
+    Uuid,
+    Autoincrement
 }
 
-public class KeystoneJsObject(KeystoneImportObjects imports, string name)
+public enum KeystoneIndexMode
 {
-    public string Name { get; } = name;
-    public KeystoneImportObjects Imports { get; } = imports;
-
-    public override string ToString() => this.Name;
-}
-
-public abstract class KeystoneJsFunctionCall(KeystoneImportObjects imports, string name)
-{
-    public KeystoneImportObjects Imports { get; } = imports;
-
-    public string Name { get; } = name;
-
-    public abstract object?[] Args { get; }
-}
-
-public abstract class KeystoneJsFunctionPropArgCall : KeystoneJsFunctionCall
-{
-    private readonly PropertyInfo[] properties;
-    private readonly object? propObj;
-
-    protected KeystoneJsFunctionPropArgCall(KeystoneImportObjects imports, string name, object? propObj) : base(imports, name)
-    {
-        this.propObj = propObj ?? this;
-        this.properties = this.propObj.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public)
-            .Where(x => x.Name != nameof(this.Args) && x.Name != nameof(this.Name) && x.Name != nameof(this.Imports)).ToArray();
-    }
-
-    public override object?[] Args =>
-    [
-        this.properties
-            .Select(p => (name: Utils.ToCamelCase(p.Name), value: p.GetValue(this.propObj, null)))
-            .Where(x => x.value != null)
-            .ToDictionary(x => x.name, x => x.value)
-    ];
-}
-
-using System.Text.Json.Serialization;
-using Keystone4Net.Common;
-using Keystone4Net.Enums;
-
-namespace Keystone4Net.Entities;
-
-public abstract class KeystoneList(Type type) : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Core, "list", null)
-{
-    [JsonIgnore]
-    internal Type Type { get; } = type;
-
-    internal KeystoneListDb Db { get; } = new();
-
-    public KeystoneListAccess? Access { get; set; } = KeystoneListAccess.AllowAll;
-
-    public KeystoneListUiOptions? Ui { get; set; }
-
-    public KeystoneListGraphqlOptions? Graphql { get; set; }
-
-    public KeystoneListHooks? Hooks { get; set; }
-
-    public string? Description { get; set; }
-
-    public bool IsSingleton { get; set; }
-
-    public bool? DefaultIsFilterable { get; set; }
-
-    public bool? DefaultIsOrderable { get; set; }
-
-    public Dictionary<string, KeystoneField> Fields { get; } = [];
-
-    public string Add(string key, KeystoneField value)
-    {
-        key = Utils.ToCamelCase(key);
-        this.Fields.Add(key, value);
-
-        return key;
-    }
-
-}
-
-public sealed class KeystoneList<T>() : KeystoneList(typeof(T))
-{
-}
-
-using Keystone4Net.Enums;
-
-namespace Keystone4Net.Entities;
-
-public abstract class KeystoneSession(string name) : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Session, name, null)
-{
-}
-
-public abstract class KeystoneCookieSession(string name) : KeystoneSession(name)
-{
-    public string Secret { get; set; } = string.Empty;
-
-    public KeystoneIronOptions? IronOptions { get; set; }
-
-    public int MaxAge { get; set; }
-
-    public string? CookieName { get; set; }
-
-    public bool? Secure { get; set; }
-
-    public string? Path { get; set; }
-
-    public string? Domain { get; set; }
-
-    public KeystoneCookieSameSite? SameSite { get; set; }
-}
-
-public class KeystoneStatelessSession() : KeystoneCookieSession("statelessSessions")
-{
-}
-
-public class KeystoneStoredSession() : KeystoneCookieSession("storedSessions")
-{
-    public KeystoneJsFunction? Store { get; set; }
-}
-
-
-
-namespace Keystone4Net.Enums;
-
-public enum KeystoneCookieSameSite
-{
-    True,
-    False,
-    Lax,
-    Strict,
-    None
-}
-namespace Keystone4Net.Enums;
-
-public enum KeystoneDbProvider
-{
-    Sqlite,
-    Postgresql,
-    Mysql
-}
-namespace Keystone4Net.Enums;
-
-public enum KeystoneDisplayMode
-{
-    Input,
-    Textarea,
-    Select,
-    Cards,
-    Count
-}
-namespace Keystone4Net.Enums;
-
-public enum KeystoneFieldMode
-{
-    Edit,
-    Read,
-    Hidden
-}
-
-
-namespace Keystone4Net.Enums;
-
-public enum KeystoneFieldPosition
-{
-    Form,
-    Sidebar
-}
-
-
-namespace Keystone4Net.Enums;
-
-public enum KeystoneImportObjects
-{
-    Core,
-    Access,
-    Fields,
-    Session
-}
-namespace Keystone4Net.Enums;
-
-public enum KeystoneIndex
-{
-    None,
-    Indexed,
     Unique
 }
 
-namespace Keystone4Net.Enums;
 
-public enum KeystoneRemoveMode
+public sealed class KeystoneGraphqlCacheHint
 {
-    Disconnect,
-    None
+    public int MaxAge { get; set; }
+    public KeystoneGraphqlCacheScope Scope { get; set; }
 }
 
-namespace Keystone4Net.Enums;
-
-public enum KeystoneSortDirection
+public sealed class KeystoneFieldGraphqlOmit
 {
-    Asc,
-    Desc
+    public bool? Read { get; set; }
+    public bool? Create { get; set; }
+    public bool? Update { get; set; }
 }
 
+public sealed class KeystoneListGraphqlOmit
+{
+    public bool? Query { get; set; }
+    public bool? Create { get; set; }
+    public bool? Update { get; set; }
+    public bool? Delete { get; set; }
+}
 
+public abstract class KeystoneField(string name, FieldDbOptions db) : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Fields, name)
+{
+    internal FieldDbOptions Db { get; } = db;
+    public KeystoneJsValue<KeystoneFieldAccess, KeystoneJsFunction, KeystoneFieldAccessControl>? Access { get; set; }
+    public KeystoneFieldHooks? Hooks { get; set; }
+    public string? Label { get; set; }
+    public KeystoneJsValue<bool, KeystoneJsFunction>? IsFilterable { get; set; }
+    public KeystoneJsValue<bool, KeystoneJsFunction>? IsOrderable { get; set; }
+    public KeystoneJsValue<bool, KeystoneIndexMode>? IsIndexed { get; set; }
+    public KeystoneFieldGraphqlOptions? Graphql { get; set; }
+}
+
+public sealed class KeystoneFieldGraphqlOptions
+{
+    public KeystoneGraphqlCacheHint? CacheHint { get; set; }
+    public KeystoneFieldGraphqlIsNonNull? IsNonNull { get; set; }
+    public KeystoneJsValue<bool, KeystoneFieldGraphqlOmit>? Omit { get; set; }
+}
+
+public sealed class KeystoneListGraphqlOptions
+{
+    public string? Description { get; set; }
+    public string? Plural { get; set; }
+    public string? ItemQueryName { get; set; }
+    public string? ListQueryName { get; set; }
+    public int? MaxTake { get; set; }
+    public KeystoneGraphqlCacheHint? CacheHint { get; set; }
+    public KeystoneJsValue<bool, KeystoneListGraphqlOmit>? Omit { get; set; }
+}
+
+public enum KeystoneIdFieldType
+{
+    BigInt
+}
+
+public sealed class KeystoneIdFieldOptions
+{
+    public KeystoneIdFieldKind Kind { get; set; }
+    public KeystoneIdFieldType? Type { get; set; }
+}
+
+public interface IKeystoneDbContext
+{
+    void ConfigureKeystone(KeystoneConfig config);
+}
