@@ -14,4 +14,9 @@ public class KeystoneFileDbOptions
 
 public class KeystoneStorageStrategy
 {
+    public KeystoneJsFunction? Read { get; set; }
+
+    public KeystoneJsFunction? Write { get; set; }
+
+    public KeystoneJsFunction? Delete { get; set; }
 }
