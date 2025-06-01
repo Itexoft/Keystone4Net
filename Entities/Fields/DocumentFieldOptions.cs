@@ -2,10 +2,10 @@ namespace Keystone4Net.Entities;
 
 public class KeystoneDocumentFieldOptions : KeystoneFieldOptions
 {
-    public KeystoneDocumentDbOptions? Db { get; set; }
+    internal KeystoneDocumentDbOptions? Db { get; set; }
 }
 
-public class KeystoneDocumentDbOptions
+internal class KeystoneDocumentDbOptions
 {
     public string? Map { get; set; }
 }

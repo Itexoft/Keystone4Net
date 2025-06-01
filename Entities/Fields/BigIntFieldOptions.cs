@@ -3,11 +3,11 @@ namespace Keystone4Net.Entities;
 public class KeystoneBigIntFieldOptions : KeystoneFieldOptions
 {
     public long? DefaultValue { get; set; }
-    public KeystoneBigIntDbOptions? Db { get; set; }
+    internal KeystoneBigIntDbOptions? Db { get; set; }
     public KeystoneBigIntValidationOptions? Validation { get; set; }
 }
 
-public class KeystoneBigIntDbOptions
+internal class KeystoneBigIntDbOptions
 {
     public bool? IsNullable { get; set; }
     public string? Map { get; set; }

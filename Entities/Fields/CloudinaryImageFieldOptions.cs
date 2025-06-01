@@ -2,11 +2,11 @@ namespace Keystone4Net.Entities;
 
 public class KeystoneCloudinaryImageFieldOptions : KeystoneFieldOptions
 {
-    public KeystoneCloudinaryDbOptions? Db { get; set; }
+    internal KeystoneCloudinaryDbOptions? Db { get; set; }
     public KeystoneCloudinaryCredentials Cloudinary { get; set; } = new();
 }
 
-public class KeystoneCloudinaryDbOptions
+internal class KeystoneCloudinaryDbOptions
 {
     public string? Map { get; set; }
 }
