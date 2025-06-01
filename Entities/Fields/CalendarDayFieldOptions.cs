@@ -1,0 +1,18 @@
+namespace Keystone4Net.Entities;
+
+public class KeystoneCalendarDayFieldOptions : KeystoneFieldOptions
+{
+    public string? DefaultValue { get; set; }
+    public KeystoneCalendarDayDbOptions? Db { get; set; }
+    public KeystoneCalendarDayValidationOptions? Validation { get; set; }
+}
+
+public class KeystoneCalendarDayDbOptions
+{
+    public bool? IsNullable { get; set; }
+}
+
+public class KeystoneCalendarDayValidationOptions
+{
+    public bool IsRequired { get; set; }
+}

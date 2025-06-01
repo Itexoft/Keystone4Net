@@ -58,75 +58,6 @@ public class KeystoneListUiOptions
 }
 
 
-public class KeystoneTextFieldOptions : IKeystoneFieldOptions
-{
-    public object? Access { get; set; }
-
-    public object? Hooks { get; set; }
-
-    public string? Label { get; set; }
-
-    public bool? IsFilterable { get; set; }
-
-    public bool? IsOrderable { get; set; }
-
-    public string? DefaultValue { get; set; }
-
-    public KeystoneTextDbOptions? Db { get; set; }
-
-    public KeystoneTextValidationOptions? Validation { get; set; }
-
-    public KeystoneTextUiOptions? Ui { get; set; }
-
-    public KeystoneIndex? IsIndexed { get; set; }
-
-    public KeystoneFieldGraphqlOptions? Graphql { get; set; }
-}
-
-public class KeystoneFieldUiOptions
-{
-    public string? Views { get; set; }
-
-    public string? Description { get; set; }
-
-    public KeystoneViewOptions? CreateView { get; set; }
-
-    public KeystoneItemKeystoneViewOptions? ItemView { get; set; }
-
-    public KeystoneViewOptions? ListView { get; set; }
-}
-
-public class KeystoneItemKeystoneViewOptions : KeystoneViewOptions
-{
-    public KeystoneFieldPosition FieldPosition { get; set; }
-}
-
-public class KeystoneTextValidationOptions
-{
-    public bool IsRequired { get; set; }
-
-    public KeystoneTextLengthOptions? Length { get; set; }
-
-    public KeystoneTextMatchOptions? Match { get; set; }
-}
-
-public class KeystoneTextLengthOptions
-{
-    public int Min { get; set; }
-
-    public int? Max { get; set; }
-}
-
-public class KeystoneTextDbOptions
-{
-    public string? Map { get; set; }
-
-    public bool IsNullable { get; set; }
-
-    public string? NativeType { get; set; }
-
-    public KeystoneJsFunction? ExtendPrismaSchema { get; set; }
-}
 
 public class KeystoneFieldGraphqlIsNonNull
 {
@@ -263,10 +194,6 @@ public class KeystoneListGraphqlOptions
     public KeystoneGraphqlOmit? Omit { get; set; }
 }
 
-public class KeystoneTextUiOptions : KeystoneFieldUiOptions
-{
-    public KeystoneDisplayMode DisplayMode { get; set; }
-}
 
 public class KeystoneUiSettings
 {
@@ -291,7 +218,7 @@ public abstract class KeystoneCookieSession(string name) : KeystoneSession(name)
 {
     public string Secret { get; set; } = string.Empty;
 
-    public object? IronOptions { get; set; }
+    public KeystoneIronOptions? IronOptions { get; set; }
 
     public int MaxAge { get; set; }
 
@@ -303,7 +230,7 @@ public abstract class KeystoneCookieSession(string name) : KeystoneSession(name)
 
     public string? Domain { get; set; }
 
-    public object? SameSite { get; set; }
+    public KeystoneCookieSameSite? SameSite { get; set; }
 }
 
 public class KeystoneStatelessSession() : KeystoneCookieSession("statelessSessions")
@@ -312,15 +239,15 @@ public class KeystoneStatelessSession() : KeystoneCookieSession("statelessSessio
 
 public class KeystoneStoredSession() : KeystoneCookieSession("storedSessions")
 {
-    public object? Store { get; set; }
+    public KeystoneJsFunction? Store { get; set; }
 }
 
-public class KeystoneField(KeystoneFieldType type, IKeystoneFieldOptions? options)
+public class KeystoneField(KeystoneFieldType type, KeystoneFieldOptions? options)
     : KeystoneJsFunctionPropArgCall(KeystoneImportObjects.Fields, Utils.ToCamelCase(type), options)
 {
     public KeystoneFieldType Type { get; set; } = type;
 
-    public IKeystoneFieldOptions? Options { get; set; } = options;
+    public KeystoneFieldOptions? Options { get; set; } = options;
 }
 
 public class KeystoneListAccess(string name) : KeystoneJsObject(KeystoneImportObjects.Access, Utils.ToCamelCase(name))
@@ -332,4 +259,17 @@ public class KeystoneListAccess(string name) : KeystoneJsObject(KeystoneImportOb
     public static KeystoneListAccess AllOperations { get; } = new(nameof(AllOperations));
 
     public static KeystoneListAccess Unfiltered { get; } = new(nameof(Unfiltered));
+}
+
+public class KeystoneIronOptions
+{
+}
+
+public enum KeystoneCookieSameSite
+{
+    True,
+    False,
+    Lax,
+    Strict,
+    None
 }
