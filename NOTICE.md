@@ -1,3 +1,3 @@
-Itexoft.Common
+Keystone4Net
 Copyright © 2025 Denis Kudelin
-https://github.com/Itexoft/Common
+https://github.com/Itexoft/Keystone4Net
