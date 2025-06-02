@@ -30,3 +30,5 @@ await keystone.BuildAsync();
 ```
 
 Call `keystone.Start()` to run the development server.
+
+All basic types and enums are located in the `Model` folder.
